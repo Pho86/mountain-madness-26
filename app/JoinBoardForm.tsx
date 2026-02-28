@@ -19,7 +19,7 @@ export function JoinBoardForm() {
         ref={inputRef}
         type="text"
         placeholder="Or enter board ID"
-        className="rounded-lg border border-zinc-300 px-4 py-2 outline-none focus:ring-2 focus:ring-zinc-400"
+        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 placeholder:text-zinc-500 outline-none focus:ring-2 focus:ring-zinc-400"
       />
       <button
         type="submit"

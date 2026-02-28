@@ -4,36 +4,82 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { StickyNote } from "@/lib/types";
 
 const COLORS = [
-  "#fef08a", // yellow
-  "#bbf7d0", // green
-  "#bfdbfe", // blue
-  "#fbcfe8", // pink
-  "#ddd6fe", // violet
+  { bg: "#fef9c3", border: "#fde047", label: "yellow" },
+  { bg: "#dcfce7", border: "#86efac", label: "green" },
+  { bg: "#dbeafe", border: "#93c5fd", label: "blue" },
+  { bg: "#fce7f3", border: "#f9a8d4", label: "pink" },
+  { bg: "#ede9fe", border: "#c4b5fd", label: "violet" },
+  { bg: "#ffedd5", border: "#fdba74", label: "orange" },
 ];
 
 function randomColor() {
-  return COLORS[Math.floor(Math.random() * COLORS.length)];
+  const c = COLORS[Math.floor(Math.random() * COLORS.length)];
+  return c.bg;
+}
+
+function getBorderColor(bg: string) {
+  const found = COLORS.find((c) => c.bg === bg);
+  return found?.border ?? "rgba(0,0,0,0.08)";
+}
+
+function formatNoteDate(ms: number): string {
+  const d = new Date(ms);
+  const now = new Date();
+  const sameDay =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+  if (sameDay) {
+    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  const opts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+  };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = "numeric";
+  return d.toLocaleDateString([], opts);
 }
 
 export function Sticky({
   note,
   onUpdate,
-  onDelete,
   onDragEnd,
+  onSelect,
   isDragging,
+  isSelected,
+  autoFocusEdit = false,
+  onEditEnd,
+  displayX,
+  displayY,
 }: {
   note: StickyNote;
   onUpdate: (n: StickyNote) => void;
-  onDelete: (id: string) => void;
-  onDragEnd?: () => void;
+  onDragEnd?: (noteId: string, clientX: number, clientY: number) => void;
+  onSelect?: (noteId: string) => void;
   isDragging?: boolean;
+  isSelected?: boolean;
+  autoFocusEdit?: boolean;
+  onEditEnd?: () => void;
+  displayX?: number;
+  displayY?: number;
 }) {
-  const [editing, setEditing] = useState(false);
+  const x = displayX ?? note.x;
+  const y = displayY ?? note.y;
+  const [editing, setEditing] = useState(autoFocusEdit);
   const [localText, setLocalText] = useState(note.text);
+  const hasAutoFocused = useRef(false);
 
   useEffect(() => {
     if (!editing) setLocalText(note.text);
   }, [note.text, editing]);
+
+  useEffect(() => {
+    if (autoFocusEdit && !hasAutoFocused.current) {
+      hasAutoFocused.current = true;
+      setEditing(true);
+    }
+  }, [autoFocusEdit]);
+
   const dragRef = useRef<{
     startX: number;
     startY: number;
@@ -49,15 +95,14 @@ export function Sticky({
       if ((e.target as HTMLElement).closest("button")) return;
       if (editing) return;
       if ((e.target as HTMLElement).closest("textarea")) return;
-      // Don't capture yet — wait for movement so double-click can fire
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
-        noteX: note.x,
-        noteY: note.y,
+        noteX: x,
+        noteY: y,
       };
     },
-    [editing, note.x, note.y]
+    [editing, x, y]
   );
 
   const handlePointerMove = useCallback(
@@ -81,26 +126,36 @@ export function Sticky({
     [note, onUpdate]
   );
 
-  const handlePointerUp = useCallback(() => {
-    if (dragRef.current) onDragEnd?.();
-    dragRef.current = null;
-  }, [onDragEnd]);
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const wasDragging = dragRef.current?.dragStarted;
+      const noteId = note.id;
+      if (wasDragging && onDragEnd) {
+        onDragEnd(noteId, e.clientX, e.clientY);
+      } else if (!wasDragging && onSelect) {
+        onSelect(noteId);
+      }
+      dragRef.current = null;
+    },
+    [note.id, onDragEnd, onSelect]
+  );
 
   const handleBlur = useCallback(() => {
     setEditing(false);
     if (localText.trim() !== note.text) {
-      onUpdate({ ...note, text: localText.trim() || "New note" });
+      onUpdate({ ...note, text: localText.trim() || "" });
     }
-  }, [localText, note, onUpdate]);
+    onEditEnd?.();
+  }, [localText, note, onUpdate, onEditEnd]);
+
+  const borderColor = getBorderColor(note.color);
 
   return (
     <div
-      className="absolute w-52 select-none rounded-lg shadow-lg transition-shadow"
+      className="absolute w-56 transition-all duration-150"
       style={{
-        left: note.x,
-        top: note.y,
-        backgroundColor: note.color,
-        boxShadow: isDragging ? "0 20px 40px rgba(0,0,0,0.2)" : undefined,
+        left: x,
+        top: y,
         zIndex: isDragging ? 50 : 1,
       }}
       onPointerDown={handlePointerDown}
@@ -109,50 +164,76 @@ export function Sticky({
       onPointerCancel={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      <div className="flex items-start justify-between gap-1 rounded-t-lg border-b border-black/5 p-2">
-        {editing ? (
-          <textarea
-            className="min-h-16 w-full resize-none rounded bg-white/60 p-1 text-sm outline-none"
-            value={localText}
-            onChange={(e) => setLocalText(e.target.value)}
-            onBlur={handleBlur}
-            autoFocus
-          />
-        ) : (
-          <p
-            className="min-h-10 flex-1 cursor-text rounded p-1 text-sm leading-snug text-zinc-800"
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              setLocalText(note.text);
-              setEditing(true);
-            }}
-          >
-            {note.text || "Double-click to edit"}
-          </p>
-        )}
-        <button
-          type="button"
-          className="rounded p-1 text-zinc-500 hover:bg-black/10 hover:text-zinc-800"
-          onClick={() => onDelete(note.id)}
-          aria-label="Delete note"
-        >
-          ×
-        </button>
+      <div
+        className={`flex min-h-[120px] flex-col rounded-lg border-2 shadow-md transition-shadow ${
+          isSelected
+            ? "ring-2 ring-blue-500 ring-offset-2 border-blue-500"
+            : ""
+        }`}
+        style={{
+          backgroundColor: note.color,
+          borderColor: isSelected ? "rgb(59 130 246)" : borderColor,
+          boxShadow: isDragging
+            ? "0 25px 50px -12px rgba(0,0,0,0.25)"
+            : "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)",
+        }}
+      >
+        <div className="flex flex-1 flex-col gap-1 p-3 select-text">
+          {editing ? (
+            <textarea
+              className="min-h-20 w-full resize-none rounded border-0 bg-white/90 p-2 text-base font-normal text-zinc-900 placeholder:text-zinc-400 outline-none"
+              value={localText}
+              onChange={(e) => setLocalText(e.target.value)}
+              onBlur={handleBlur}
+              onPointerDown={(e) => e.stopPropagation()}
+              autoFocus
+              placeholder="Type something…"
+            />
+          ) : (
+            <p
+              className="min-h-14 flex-1 cursor-text rounded p-2 text-base font-normal leading-normal text-zinc-800 select-text"
+              onPointerDown={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setLocalText(note.text);
+                setEditing(true);
+              }}
+            >
+              {note.text || "Double-click to edit"}
+            </p>
+          )}
+          <div className="mt-auto flex items-center gap-1.5 text-xs text-zinc-600">
+            {note.authorName && (
+              <span className="truncate font-medium" title={note.authorName}>
+                {note.authorName}
+              </span>
+            )}
+            {note.authorName && <span>·</span>}
+            <span title={new Date(note.createdAt).toLocaleString()}>
+              {formatNoteDate(note.createdAt)}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-export function useAddSticky() {
-  return useCallback((x: number, y: number) => {
-    const note: StickyNote = {
-      id: crypto.randomUUID(),
-      x,
-      y,
-      text: "New note",
-      color: randomColor(),
-      createdAt: Date.now(),
-    };
-    return note;
-  }, []);
+export function useAddSticky(authorName?: string) {
+  return useCallback(
+    (x: number, y: number) => {
+      const note: StickyNote = {
+        id: crypto.randomUUID(),
+        x,
+        y,
+        text: "",
+        color: randomColor(),
+        createdAt: Date.now(),
+        authorName: authorName ?? undefined,
+      };
+      return note;
+    },
+    [authorName]
+  );
 }

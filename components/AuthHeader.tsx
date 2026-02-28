@@ -36,7 +36,23 @@ export function AuthHeader() {
       <div className="flex items-center justify-end gap-3">
         {user ? (
           <>
-            <span className="text-sm text-zinc-600">{user.email}</span>
+            <div className="flex items-center gap-2">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt=""
+                  className="h-8 w-8 rounded-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-300 text-sm font-medium text-zinc-600">
+                  {(user.displayName || user.email || "?").charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="text-sm font-medium text-zinc-700">
+                {user.displayName || user.email?.split("@")[0] || "User"}
+              </span>
+            </div>
             <button
               type="button"
               onClick={handleSignOut}
