@@ -4,9 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useBoardFirestore } from "@/lib/use-board-firestore";
 import { useAuth } from "@/lib/auth-context";
+import { useUserRooms } from "@/lib/use-user-rooms";
 import { Sticky, useAddSticky } from "@/components/Sticky";
 import { BoardToolbar } from "@/components/BoardToolbar";
 import { DeleteZone } from "@/components/DeleteZone";
+import { EditableRoomName } from "@/components/EditableRoomName";
+import { BoardPageSkeleton } from "@/components/BoardPageSkeleton";
+import { useRoom } from "@/lib/use-room";
 import type { StickyNote } from "@/lib/types";
 
 type Tool = "cursor" | "sticky";
@@ -21,6 +25,8 @@ export default function BoardPage() {
   const params = useParams();
   const boardId = typeof params.boardId === "string" ? params.boardId : null;
   const { user } = useAuth();
+  const { addRoom } = useUserRooms(user?.uid ?? null);
+  const { name: roomName, setName: setRoomName, ensureRoomExists, loading: roomLoading } = useRoom(boardId);
   const { notes, connected, addNote, updateNote, deleteNote } =
     useBoardFirestore(boardId);
   const authorName = user?.displayName || user?.email?.split("@")[0] || undefined;
@@ -30,15 +36,23 @@ export default function BoardPage() {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
   const [optimisticPosition, setOptimisticPosition] = useState<Record<string, { x: number; y: number }>>({});
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null);
+  const didPanRef = useRef(false);
   const deleteZoneRef = useRef<HTMLDivElement>(null);
 
   const handleBoardClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (didPanRef.current) {
+        didPanRef.current = false;
+        return;
+      }
       if ((e.target as HTMLElement).closest("[data-sticky]")) return;
       if (tool === "sticky") {
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left - 80;
-        const y = e.clientY - rect.top - 40;
+        const x = e.clientX - rect.left - pan.x - 80;
+        const y = e.clientY - rect.top - pan.y - 40;
         const note = createSticky(x, y);
         addNote(note);
         setLastCreatedNoteId(note.id);
@@ -46,8 +60,41 @@ export default function BoardPage() {
         setSelectedNoteId(null);
       }
     },
-    [tool, addNote, createSticky]
+    [tool, addNote, createSticky, pan.x, pan.y]
   );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if ((e.target as HTMLElement).closest("[data-sticky]")) return;
+      if (tool !== "cursor") return;
+      setIsPanning(true);
+      panStartRef.current = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        panX: pan.x,
+        panY: pan.y,
+      };
+    },
+    [tool, pan.x, pan.y]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const start = panStartRef.current;
+      if (!start) return;
+      didPanRef.current = true;
+      setPan({
+        x: start.panX + (e.clientX - start.clientX),
+        y: start.panY + (e.clientY - start.clientY),
+      });
+    },
+    []
+  );
+
+  const handlePointerUp = useCallback(() => {
+    panStartRef.current = null;
+    setIsPanning(false);
+  }, []);
 
   const handleEditEnd = useCallback(() => {
     setLastCreatedNoteId(null);
@@ -106,6 +153,43 @@ export default function BoardPage() {
     }));
   }, []);
 
+  useEffect(() => {
+    if (user && boardId) addRoom(boardId);
+  }, [user, boardId, addRoom]);
+
+  useEffect(() => {
+    if (boardId) ensureRoomExists();
+  }, [boardId, ensureRoomExists]);
+
+  useEffect(() => {
+    const name = roomName || boardId;
+    if (name) document.title = `${name} · Board`;
+    return () => { document.title = "Waifu Fridge"; };
+  }, [roomName, boardId]);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if ((e.target as HTMLElement).closest("textarea")) return;
+      e.preventDefault();
+      setPan((prev) => ({
+        x: prev.x - e.deltaX,
+        y: prev.y - e.deltaY,
+      }));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   if (!boardId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-100">
@@ -114,15 +198,18 @@ export default function BoardPage() {
     );
   }
 
+  if (roomLoading) {
+    return <BoardPageSkeleton />;
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 shadow-sm">
-        <h1 className="text-lg font-semibold text-zinc-800">
-          Sticky board
-          <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
-            Room {boardId}
-          </span>
-        </h1>
+    <div className="flex min-h-screen flex-col bg-zinc-100 animate-fade-in">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
+        <EditableRoomName
+          name={roomName}
+          roomCode={boardId}
+          onSave={setRoomName}
+        />
         <div className="flex items-center gap-3">
           <span
             className={`h-2 w-2 rounded-full ${
@@ -148,46 +235,56 @@ export default function BoardPage() {
       <BoardToolbar tool={tool} onToolChange={setTool} />
 
       <main
-        className="relative flex-1 overflow-auto"
+        ref={mainRef}
+        className="relative flex-1 overflow-hidden"
         style={{
           minHeight: "calc(100vh - 56px - 44px)",
-          cursor: tool === "sticky" ? "crosshair" : "default",
+          cursor: isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : "grab",
         }}
         onClick={handleBoardClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        role="application"
+        aria-label="Board canvas"
       >
-        <div className="absolute inset-0" />
-        {notes.map((note) => {
-          const opt = optimisticPosition[note.id];
-          return (
-            <div key={note.id} data-sticky>
-              <Sticky
-                note={note}
-                onUpdate={handleUpdate}
-                onDragEnd={handleDragEnd}
-                onSelect={setSelectedNoteId}
-                isDragging={draggingId === note.id}
-                isSelected={selectedNoteId === note.id}
-                autoFocusEdit={lastCreatedNoteId === note.id}
-                onEditEnd={handleEditEnd}
-                onSaveNote={updateNote}
-                displayX={opt?.x}
-                displayY={opt?.y}
-              />
-            </div>
-          );
-        })}
-        <p className="absolute bottom-4 left-4 text-sm text-zinc-400">
-          {tool === "sticky"
-            ? "Click on the board to add a note"
-            : "Click to select · Double-click to edit · Drag to delete zone or press Delete"}
-        </p>
+        <div
+          className="absolute inset-0 min-h-full min-w-full"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px)`,
+            cursor: isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : "grab",
+          }}
+        >
+          <div className="absolute inset-0" />
+          {notes.map((note) => {
+            const opt = optimisticPosition[note.id];
+            return (
+              <div key={note.id} data-sticky>
+                <Sticky
+                  note={note}
+                  onUpdate={handleUpdate}
+                  onDragEnd={handleDragEnd}
+                  onSelect={setSelectedNoteId}
+                  isDragging={draggingId === note.id}
+                  isSelected={selectedNoteId === note.id}
+                  autoFocusEdit={lastCreatedNoteId === note.id}
+                  onEditEnd={handleEditEnd}
+                  onSaveNote={updateNote}
+                  displayX={opt?.x}
+                  displayY={opt?.y}
+                />
+              </div>
+            );
+          })}
+        </div>
       </main>
 
       <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-6">
         <div
           ref={deleteZoneRef}
           data-delete-zone
-          className="pointer-events-auto flex cursor-default items-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 shadow-lg transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          className="pointer-events-auto flex cursor-default items-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
         >
           <DeleteZone />
         </div>

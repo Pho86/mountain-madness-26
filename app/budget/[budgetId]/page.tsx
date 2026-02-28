@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useBudgetFirestore } from "@/lib/use-budget-firestore";
+import { useAuth } from "@/lib/auth-context";
+import { useUserRooms } from "@/lib/use-user-rooms";
+import { useRoom } from "@/lib/use-room";
+import { BudgetPageSkeleton } from "@/components/BudgetPageSkeleton";
 import type { Expense } from "@/lib/types";
 
 function formatCurrency(amount: number) {
@@ -16,6 +20,9 @@ function formatCurrency(amount: number) {
 export default function BudgetTrackerPage() {
   const params = useParams();
   const budgetId = typeof params.budgetId === "string" ? params.budgetId : null;
+  const { user } = useAuth();
+  const { addRoom } = useUserRooms(user?.uid ?? null);
+  const { name: roomName, ensureRoomExists, loading: roomLoading } = useRoom(budgetId);
   const { expenses, connected, addExpense, deleteExpense } =
     useBudgetFirestore(budgetId);
 
@@ -46,6 +53,20 @@ export default function BudgetTrackerPage() {
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
+  useEffect(() => {
+    if (user && budgetId) addRoom(budgetId);
+  }, [user, budgetId, addRoom]);
+
+  useEffect(() => {
+    if (budgetId) ensureRoomExists();
+  }, [budgetId, ensureRoomExists]);
+
+  useEffect(() => {
+    const name = roomName || budgetId;
+    if (name) document.title = `${name} · Budget`;
+    return () => { document.title = "Waifu Fridge"; };
+  }, [roomName, budgetId]);
+
   if (!budgetId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-100">
@@ -54,13 +75,17 @@ export default function BudgetTrackerPage() {
     );
   }
 
+  if (roomLoading) {
+    return <BudgetPageSkeleton />;
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 shadow-sm">
+    <div className="flex min-h-screen flex-col bg-zinc-100 animate-fade-in">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3">
         <h1 className="text-lg font-semibold text-zinc-800">
-          Budget tracker
+          Budget · {roomName || budgetId}
           <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
-            Room {budgetId}
+            {budgetId}
           </span>
         </h1>
         <div className="flex items-center gap-3">
@@ -88,7 +113,7 @@ export default function BudgetTrackerPage() {
       <main className="flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-2xl space-y-6">
           {/* Summary */}
-          <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <section className="rounded-xl border border-zinc-200 bg-white p-4">
             <h2 className="text-sm font-medium text-zinc-500">Total spent</h2>
             <p className="mt-1 text-2xl font-bold text-zinc-900">
               {formatCurrency(total)}
@@ -99,7 +124,7 @@ export default function BudgetTrackerPage() {
           </section>
 
           {/* Add expense form */}
-          <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+          <section className="rounded-xl border border-zinc-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-medium text-zinc-700">
               Add expense
             </h2>
@@ -158,7 +183,7 @@ export default function BudgetTrackerPage() {
           </section>
 
           {/* Expense list */}
-          <section className="rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <section className="rounded-xl border border-zinc-200 bg-white">
             <h2 className="border-b border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700">
               Expenses
             </h2>

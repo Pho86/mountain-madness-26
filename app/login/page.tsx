@@ -28,7 +28,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-100 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6">
         <h2 className="mb-6 text-center text-lg font-semibold text-zinc-900">
           Sign in to Waifu Fridge
         </h2>
@@ -37,7 +37,7 @@ export default function LoginPage() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={busy}
-          className="flex w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-50"
         >
           <GoogleIcon className="h-5 w-5" />
           <span className="font-medium">

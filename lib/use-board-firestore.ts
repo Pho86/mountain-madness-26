@@ -31,9 +31,21 @@ function toDoc(note: StickyNote) {
     y: note.y,
     text: note.text,
     color: note.color,
+    ...(note.fontSize != null && { fontSize: note.fontSize }),
+    ...(note.fontWeight != null && { fontWeight: note.fontWeight }),
+    ...(note.fontStyle != null && { fontStyle: note.fontStyle }),
+    ...(note.listStyle != null && { listStyle: note.listStyle }),
     createdAt: note.createdAt,
     ...(note.authorName != null && { authorName: note.authorName }),
   };
+}
+
+function normalizeFontSize(v: unknown): number {
+  if (typeof v === "number" && v >= 10 && v <= 48) return v;
+  if (v === "sm") return 12;
+  if (v === "base") return 16;
+  if (v === "lg") return 20;
+  return 16;
 }
 
 function fromDoc(data: {
@@ -43,6 +55,10 @@ function fromDoc(data: {
   text: string;
   color: string;
   createdAt: unknown;
+  fontSize?: number | "sm" | "base" | "lg";
+  fontWeight?: "normal" | "bold";
+  fontStyle?: "normal" | "italic";
+  listStyle?: "none" | "bullet";
   authorName?: string;
 }): StickyNote {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
@@ -52,6 +68,10 @@ function fromDoc(data: {
     y: data.y,
     text: data.text ?? "",
     color: data.color ?? "#fef08a",
+    fontSize: normalizeFontSize(data.fontSize),
+    fontWeight: data.fontWeight ?? "normal",
+    fontStyle: data.fontStyle ?? "normal",
+    listStyle: data.listStyle ?? "none",
     createdAt: typeof created === "object" && created?.toMillis ? created.toMillis() : (created as number) ?? Date.now(),
     authorName: data.authorName,
   };
@@ -100,6 +120,10 @@ export function useBoardFirestore(boardId: string | null) {
         y: note.y,
         text: note.text,
         color: note.color,
+        ...(note.fontSize != null && { fontSize: note.fontSize }),
+        ...(note.fontWeight != null && { fontWeight: note.fontWeight }),
+        ...(note.fontStyle != null && { fontStyle: note.fontStyle }),
+        ...(note.listStyle != null && { listStyle: note.listStyle }),
         ...(note.authorName != null && { authorName: note.authorName }),
       });
     },
