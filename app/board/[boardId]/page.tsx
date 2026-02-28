@@ -23,7 +23,7 @@ export default function BoardPage() {
       const note = createSticky(x, y);
       addNote(note);
     },
-    [addNote, createSticky]
+    [addNote, createSticky],
   );
 
   const handleUpdate = useCallback(
@@ -31,7 +31,7 @@ export default function BoardPage() {
       setDraggingId(note.id);
       updateNote(note);
     },
-    [updateNote]
+    [updateNote],
   );
 
   const handleUpdateEnd = useCallback(() => {
@@ -70,7 +70,7 @@ export default function BoardPage() {
             className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700"
             onClick={() => {
               navigator.clipboard.writeText(
-                `${typeof window !== "undefined" ? window.location.origin : ""}/board/${boardId}`
+                `${typeof window !== "undefined" ? window.location.origin : ""}/board/${boardId}`,
               );
             }}
           >

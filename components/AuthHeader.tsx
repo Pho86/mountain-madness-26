@@ -54,6 +54,12 @@ export function AuthHeader() {
             Sign in
           </Link>
         )}
+        <Link
+          href="/budget"
+          className="text-sm font-medium text-zinc-600 hover:text-zinc-800"
+        >
+          Budget
+        </Link>
       </div>
     </header>
   );
