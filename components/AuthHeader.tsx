@@ -62,6 +62,12 @@ export function AuthHeader() {
           >
             Budget
           </Link>
+          <Link
+            href="/calendar"
+            className="text-sm font-medium text-zinc-600 hover:text-zinc-800"
+          >
+            Calendar
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           {user ? (
@@ -75,7 +81,9 @@ export function AuthHeader() {
                 />
               ) : (
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-300 text-sm font-medium text-zinc-600">
-                  {(user.displayName || user.email || "?").charAt(0).toUpperCase()}
+                  {(user.displayName || user.email || "?")
+                    .charAt(0)
+                    .toUpperCase()}
                 </span>
               )}
               <span className="text-sm font-medium text-zinc-700">
