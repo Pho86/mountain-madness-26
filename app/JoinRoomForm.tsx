@@ -14,7 +14,7 @@ export function JoinRoomForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-3 sm:flex-row sm:items-center">
+    <form onSubmit={handleSubmit} className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:items-center">
       <input
         ref={inputRef}
         type="text"
@@ -24,7 +24,7 @@ export function JoinRoomForm() {
       />
       <button
         type="submit"
-        className="rounded-xl bg-zinc-900 px-6 py-3 font-medium text-white transition hover:bg-zinc-800"
+        className="rounded-xl bg-zinc-900 px-6 py-3 w-full font-medium text-white transition hover:bg-zinc-800"
       >
         Join room
       </button>

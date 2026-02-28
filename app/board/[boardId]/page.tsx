@@ -9,6 +9,7 @@ import { Sticky, useAddSticky } from "@/components/Sticky";
 import { BoardToolbar } from "@/components/BoardToolbar";
 import { DeleteZone } from "@/components/DeleteZone";
 import { EditableRoomName } from "@/components/EditableRoomName";
+import { RoomPageHeader } from "@/components/RoomPageHeader";
 import { BoardPageSkeleton } from "@/components/BoardPageSkeleton";
 import { useRoom } from "@/lib/use-room";
 import type { StickyNote } from "@/lib/types";
@@ -204,33 +205,17 @@ export default function BoardPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-100 animate-fade-in">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
-        <EditableRoomName
-          name={roomName}
-          roomCode={boardId}
-          onSave={setRoomName}
-        />
-        <div className="flex items-center gap-3">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              connected ? "bg-emerald-500" : "bg-red-500"
-            }`}
-            title={connected ? "Connected" : "Disconnected"}
+      <RoomPageHeader
+        left={
+          <EditableRoomName
+            name={roomName}
+            roomCode={boardId}
+            onSave={setRoomName}
+            hideCode
           />
-          <span className="text-sm text-zinc-500">
-            {connected ? "Live" : "Reconnecting…"}
-          </span>
-          <button
-            type="button"
-            className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700"
-            onClick={() => {
-              navigator.clipboard.writeText(boardId);
-            }}
-          >
-            Copy room code
-          </button>
-        </div>
-      </header>
+        }
+        roomCode={boardId}
+      />
 
       <BoardToolbar tool={tool} onToolChange={setTool} />
 

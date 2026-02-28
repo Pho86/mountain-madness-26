@@ -13,8 +13,8 @@ export default function CalendarLandingPage() {
           Shared calendar
         </h1>
         <p className="mt-2 text-zinc-600">
-          Create a calendar and share the link. Everyone with the link can add
-          events and see the same schedule in real time.
+          Create a calendar and share the room code. Everyone with the code can
+          add events and see the same schedule in real time.
         </p>
       </div>
       <div className="flex flex-col gap-4 sm:flex-row">

@@ -7,11 +7,14 @@ export function EditableRoomName({
   roomCode,
   onSave,
   disabled,
+  hideCode,
 }: {
   name: string;
   roomCode: string;
   onSave: (value: string) => void;
   disabled?: boolean;
+  /** When true, do not show "Code: {roomCode}" (e.g. when room code is shown in header) */
+  hideCode?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
@@ -51,7 +54,9 @@ export function EditableRoomName({
           placeholder="Room name"
           className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-lg font-semibold text-zinc-800 outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400"
         />
-        <span className="font-mono text-sm text-zinc-500">Code: {roomCode}</span>
+        {!hideCode && (
+          <span className="font-mono text-sm text-zinc-500">Code: {roomCode}</span>
+        )}
       </div>
     );
   }
@@ -66,9 +71,11 @@ export function EditableRoomName({
       <span className="text-lg font-semibold text-zinc-800">
         {name && name !== roomCode ? name : "Unnamed room"}
       </span>
-      <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
-        Code: {roomCode}
-      </span>
+      {!hideCode && (
+        <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
+          Code: {roomCode}
+        </span>
+      )}
     </button>
   );
 }

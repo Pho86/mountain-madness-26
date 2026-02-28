@@ -1,15 +1,38 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useCalendarFirestore } from "@/lib/use-calendar-firestore";
+import { useAuth } from "@/lib/auth-context";
+import { useUserRooms } from "@/lib/use-user-rooms";
+import { useRoom } from "@/lib/use-room";
 import { BoardCalendar } from "@/components/BoardCalendar";
+import { CalendarPageSkeleton } from "@/components/CalendarPageSkeleton";
+import { RoomPageHeader } from "@/components/RoomPageHeader";
 
 export default function CalendarPage() {
   const params = useParams();
   const calendarId =
     typeof params.calendarId === "string" ? params.calendarId : null;
+  const { user } = useAuth();
+  const { addRoom } = useUserRooms(user?.uid ?? null);
+  const { name: roomName, ensureRoomExists, loading: roomLoading } = useRoom(calendarId);
   const { events, connected, addEvent, deleteEvent } =
     useCalendarFirestore(calendarId);
+
+  useEffect(() => {
+    if (user && calendarId) addRoom(calendarId);
+  }, [user, calendarId, addRoom]);
+
+  useEffect(() => {
+    if (calendarId) ensureRoomExists();
+  }, [calendarId, ensureRoomExists]);
+
+  useEffect(() => {
+    const name = roomName || calendarId;
+    if (name) document.title = `${name} · Calendar`;
+    return () => { document.title = "Waifu Fridge"; };
+  }, [roomName, calendarId]);
 
   if (!calendarId) {
     return (
@@ -19,38 +42,16 @@ export default function CalendarPage() {
     );
   }
 
+  if (roomLoading) {
+    return <CalendarPageSkeleton />;
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 shadow-sm">
-        <h1 className="text-lg font-semibold text-zinc-800">
-          Calendar
-          <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
-            /{calendarId}
-          </span>
-        </h1>
-        <div className="flex items-center gap-3">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              connected ? "bg-emerald-500" : "bg-red-500"
-            }`}
-            title={connected ? "Connected" : "Disconnected"}
-          />
-          <span className="text-sm text-zinc-500">
-            {connected ? "Live" : "Reconnecting…"}
-          </span>
-          <button
-            type="button"
-            className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700"
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `${typeof window !== "undefined" ? window.location.origin : ""}/calendar/${calendarId}`,
-              );
-            }}
-          >
-            Copy link
-          </button>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-zinc-100 animate-fade-in">
+      <RoomPageHeader
+        left={`${roomName || calendarId}`}
+        roomCode={calendarId}
+      />
 
       <main
         className="flex-1 overflow-auto p-4"

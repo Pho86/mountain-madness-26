@@ -10,6 +10,8 @@ function getRoomIdFromPath(pathname: string): string | null {
   if (boardMatch) return boardMatch[1];
   const budgetMatch = pathname.match(/^\/budget\/([^/]+)/);
   if (budgetMatch) return budgetMatch[1];
+  const calendarMatch = pathname.match(/^\/calendar\/([^/]+)/);
+  if (calendarMatch) return calendarMatch[1];
   return null;
 }
 
@@ -63,8 +65,8 @@ export function AuthHeader() {
             Budget
           </Link>
           <Link
-            href="/calendar"
-            className="text-sm font-medium text-zinc-600 hover:text-zinc-800"
+            href={roomId ? `/calendar/${roomId}` : "/calendar"}
+            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
           >
             Calendar
           </Link>

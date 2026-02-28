@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/lib/use-user-rooms";
 import { useRoom } from "@/lib/use-room";
 import { BudgetPageSkeleton } from "@/components/BudgetPageSkeleton";
+import { RoomPageHeader } from "@/components/RoomPageHeader";
 import type { Expense } from "@/lib/types";
 
 function formatCurrency(amount: number) {
@@ -81,34 +82,10 @@ export default function BudgetTrackerPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-100 animate-fade-in">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3">
-        <h1 className="text-lg font-semibold text-zinc-800">
-          Budget · {roomName || budgetId}
-          <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
-            {budgetId}
-          </span>
-        </h1>
-        <div className="flex items-center gap-3">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              connected ? "bg-emerald-500" : "bg-red-500"
-            }`}
-            title={connected ? "Connected" : "Disconnected"}
-          />
-          <span className="text-sm text-zinc-500">
-            {connected ? "Live" : "Reconnecting…"}
-          </span>
-          <button
-            type="button"
-            className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700"
-            onClick={() => {
-              navigator.clipboard.writeText(budgetId);
-            }}
-          >
-            Copy room code
-          </button>
-        </div>
-      </header>
+      <RoomPageHeader
+        left={`${roomName || budgetId}`}
+        roomCode={budgetId}
+      />
 
       <main className="flex-1 overflow-auto p-4">
         <div className="mx-auto max-w-2xl space-y-6">
