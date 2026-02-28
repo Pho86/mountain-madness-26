@@ -2,14 +2,14 @@ This is a [Next.js](https://nextjs.org) project for **Waifu Fridge**: user accou
 
 ## Features
 
-- **Firebase Authentication** — Sign in / Sign up with email and password.
+- **Firebase Authentication** — Sign in with Google.
 - **Sticky notes** — Share a board link; everyone sees the same stickies in real time.
 - **Chore charts & cost splitting** — Firestore structure is set up so you can add these next (see below).
 
 ### 1. Firebase project (waifu-fridge)
 
 1. In [Firebase Console](https://console.firebase.google.com/) for **waifu-fridge**:
-   - Enable **Authentication** → Sign-in method → **Email/Password** (enable).
+   - Enable **Authentication** → Sign-in method → **Google** (enable and set support email).
    - Create **Firestore Database** if you haven’t (test mode for dev).
 2. In Project settings → Your apps → Web app, copy the config.
 
@@ -31,7 +31,7 @@ Set every `NEXT_PUBLIC_FIREBASE_*` from the web app config. Add `NEXT_PUBLIC_FIR
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Use **Sign in** / **Sign up** (e.g. `/login`). Sticky boards work with or without an account; when you’re ready you can tie boards to users.
+Open [http://localhost:3000](http://localhost:3000). Use **Sign in** to sign in with Google. Sticky boards work with or without an account; when you’re ready you can tie boards to users.
 
 ### Firestore structure (real-time)
 

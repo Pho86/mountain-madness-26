@@ -32,10 +32,19 @@ function toDoc(note: StickyNote) {
     text: note.text,
     color: note.color,
     createdAt: note.createdAt,
+    ...(note.authorName != null && { authorName: note.authorName }),
   };
 }
 
-function fromDoc(data: { id: string; x: number; y: number; text: string; color: string; createdAt: unknown }): StickyNote {
+function fromDoc(data: {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  color: string;
+  createdAt: unknown;
+  authorName?: string;
+}): StickyNote {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
   return {
     id: data.id,
@@ -44,6 +53,7 @@ function fromDoc(data: { id: string; x: number; y: number; text: string; color: 
     text: data.text ?? "",
     color: data.color ?? "#fef08a",
     createdAt: typeof created === "object" && created?.toMillis ? created.toMillis() : (created as number) ?? Date.now(),
+    authorName: data.authorName,
   };
 }
 
@@ -90,6 +100,7 @@ export function useBoardFirestore(boardId: string | null) {
         y: note.y,
         text: note.text,
         color: note.color,
+        ...(note.authorName != null && { authorName: note.authorName }),
       });
     },
     [boardId]

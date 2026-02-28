@@ -60,7 +60,7 @@ export default function BudgetTrackerPage() {
         <h1 className="text-lg font-semibold text-zinc-800">
           Budget tracker
           <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
-            /{budgetId}
+            Room {budgetId}
           </span>
         </h1>
         <div className="flex items-center gap-3">
@@ -77,12 +77,10 @@ export default function BudgetTrackerPage() {
             type="button"
             className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm text-white hover:bg-zinc-700"
             onClick={() => {
-              navigator.clipboard.writeText(
-                `${typeof window !== "undefined" ? window.location.origin : ""}/budget/${budgetId}`,
-              );
+              navigator.clipboard.writeText(budgetId);
             }}
           >
-            Copy link
+            Copy room code
           </button>
         </div>
       </header>

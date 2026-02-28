@@ -15,12 +15,12 @@ export function JoinBudgetForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
-      <input
-        ref={inputRef}
-        type="text"
-        placeholder="Or enter budget ID"
-        className="rounded-lg border border-zinc-300 px-4 py-2 outline-none focus:ring-2 focus:ring-zinc-400"
-      />
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Enter room code"
+          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 placeholder:text-zinc-500 outline-none focus:ring-2 focus:ring-zinc-400"
+        />
       <button
         type="submit"
         className="rounded-lg bg-zinc-700 px-4 py-2 font-medium text-white hover:bg-zinc-600"

@@ -13,8 +13,8 @@ export default function BudgetLandingPage() {
           Shared budget tracker
         </h1>
         <p className="mt-2 text-zinc-600">
-          Create a budget and share the link. Everyone with the link can add
-          expenses and see the same totals in real time.
+          Use the same room code as your sticky board. Everyone in the room sees
+          the same expenses in real time.
         </p>
       </div>
       <div className="flex flex-col gap-4 sm:flex-row">
