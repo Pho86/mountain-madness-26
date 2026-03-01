@@ -8,13 +8,14 @@ export function EditableRoomName({
   onSave,
   disabled,
   hideCode,
+  loading,
 }: {
   name: string;
   roomCode: string;
   onSave: (value: string) => void;
   disabled?: boolean;
-  /** When true, do not show "Code: {roomCode}" (e.g. when room code is shown in header) */
   hideCode?: boolean;
+  loading?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
@@ -41,9 +42,20 @@ export function EditableRoomName({
     [handleSave, name]
   );
 
+  if (loading) {
+    return (
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="h-7 w-48 min-w-48 animate-skeleton-pulse rounded bg-zinc-200" />
+        {!hideCode && (
+          <span className="shrink-0 font-mono text-sm text-zinc-500">Code: {roomCode}</span>
+        )}
+      </div>
+    );
+  }
+
   if (editing) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <input
           type="text"
           value={value}
@@ -52,10 +64,10 @@ export function EditableRoomName({
           onKeyDown={handleKeyDown}
           autoFocus
           placeholder="Room name"
-          className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-lg font-semibold text-zinc-800 outline-none focus:border-zinc-400 focus:ring-1 focus:ring-zinc-400"
+          className="min-w-48 flex-1 border-0 border-b-2 border-zinc-300 bg-transparent px-0 py-1 text-xl font-semibold text-zinc-800 outline-none focus:border-zinc-500 focus:ring-0"
         />
         {!hideCode && (
-          <span className="font-mono text-sm text-zinc-500">Code: {roomCode}</span>
+          <span className="shrink-0 font-mono text-sm text-zinc-500">Code: {roomCode}</span>
         )}
       </div>
     );
@@ -66,13 +78,13 @@ export function EditableRoomName({
       type="button"
       onClick={() => !disabled && setEditing(true)}
       disabled={disabled}
-      className="text-left hover:underline disabled:no-underline"
+      className="min-w-0 flex-1 text-left hover:underline disabled:no-underline"
     >
-      <span className="text-lg font-semibold text-zinc-800">
+      <span className="block truncate text-xl font-semibold text-zinc-800">
         {name && name !== roomCode ? name : "Unnamed room"}
       </span>
       {!hideCode && (
-        <span className="ml-2 font-mono text-sm font-normal text-zinc-500">
+        <span className="ml-2 shrink-0 font-mono text-sm font-normal text-zinc-500">
           Code: {roomCode}
         </span>
       )}

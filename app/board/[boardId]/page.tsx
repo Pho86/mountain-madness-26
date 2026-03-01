@@ -22,6 +22,10 @@ function isPointInRect(x: number, y: number, rect: DOMRect): boolean {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
+function roundPosition(v: number) {
+  return Math.round(v * 100) / 100;
+}
+
 export default function BoardPage() {
   const params = useParams();
   const boardId = typeof params.boardId === "string" ? params.boardId : null;
@@ -36,12 +40,26 @@ export default function BoardPage() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
+  const [dragOverDeleteZone, setDragOverDeleteZone] = useState(false);
+  const [frontNoteIds, setFrontNoteIds] = useState<string[]>([]);
   const [optimisticPosition, setOptimisticPosition] = useState<Record<string, { x: number; y: number }>>({});
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const panZoomRef = useRef({ pan: { x: 0, y: 0 }, zoom: 1 });
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null);
   const didPanRef = useRef(false);
+  const didJustFinishNewNoteDragRef = useRef(false);
   const deleteZoneRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const lastNewNotePositionRef = useRef<{ x: number; y: number } | null>(null);
+
+  type PendingNewNoteDrag = { noteId: string; noteX: number; noteY: number };
+  const [pendingNewNoteDrag, setPendingNewNoteDrag] = useState<PendingNewNoteDrag | null>(null);
+  const [pendingNotes, setPendingNotes] = useState<StickyNote[]>([]);
+
+  const noteIds = new Set(notes.map((n) => n.id));
+  const displayNotes = [...notes, ...pendingNotes.filter((p) => !noteIds.has(p.id))];
 
   const handleBoardClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -49,24 +67,46 @@ export default function BoardPage() {
         didPanRef.current = false;
         return;
       }
+      if (didJustFinishNewNoteDragRef.current) {
+        didJustFinishNewNoteDragRef.current = false;
+        return;
+      }
       if ((e.target as HTMLElement).closest("[data-sticky]")) return;
       if (tool === "sticky") {
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left - pan.x - 80;
-        const y = e.clientY - rect.top - pan.y - 40;
+        const contentX = (e.clientX - rect.left - pan.x) / zoom;
+        const contentY = (e.clientY - rect.top - pan.y) / zoom;
+        const x = contentX - 80;
+        const y = contentY - 40;
         const note = createSticky(x, y);
         addNote(note);
-        setLastCreatedNoteId(note.id);
+        setSelectedNoteId(note.id);
       } else {
         setSelectedNoteId(null);
       }
     },
-    [tool, addNote, createSticky, pan.x, pan.y]
+    [tool, addNote, createSticky, pan.x, pan.y, zoom]
   );
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if ((e.target as HTMLElement).closest("[data-sticky]")) return;
+      if (tool === "sticky") {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const contentX = (e.clientX - rect.left - pan.x) / zoom;
+        const contentY = (e.clientY - rect.top - pan.y) / zoom;
+        const x = roundPosition(contentX - 80);
+        const y = roundPosition(contentY - 40);
+        const note = createSticky(x, y);
+        addNote(note);
+        setPendingNotes((prev) => [...prev, note]);
+        setSelectedNoteId(note.id);
+        setFrontNoteIds((prev) => [...prev.filter((id) => id !== note.id), note.id]);
+        setPendingNewNoteDrag({ noteId: note.id, noteX: x, noteY: y });
+        setOptimisticPosition((prev) => ({ ...prev, [note.id]: { x, y } }));
+        lastNewNotePositionRef.current = { x, y };
+        return;
+      }
       if (tool !== "cursor") return;
       setIsPanning(true);
       panStartRef.current = {
@@ -76,11 +116,26 @@ export default function BoardPage() {
         panY: pan.y,
       };
     },
-    [tool, pan.x, pan.y]
+    [tool, pan.x, pan.y, zoom, addNote, createSticky]
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
+      const main = mainRef.current;
+      const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
+      if (pendingNewNoteDrag && main) {
+        const rect = main.getBoundingClientRect();
+        const contentX = (e.clientX - rect.left - currentPan.x) / currentZoom;
+        const contentY = (e.clientY - rect.top - currentPan.y) / currentZoom;
+        const x = roundPosition(contentX - 80);
+        const y = roundPosition(contentY - 40);
+        lastNewNotePositionRef.current = { x, y };
+        setOptimisticPosition((prev) => ({
+          ...prev,
+          [pendingNewNoteDrag.noteId]: { x, y },
+        }));
+        return;
+      }
       const start = panStartRef.current;
       if (!start) return;
       didPanRef.current = true;
@@ -89,13 +144,25 @@ export default function BoardPage() {
         y: start.panY + (e.clientY - start.clientY),
       });
     },
-    []
+    [pendingNewNoteDrag]
   );
 
   const handlePointerUp = useCallback(() => {
+    if (pendingNewNoteDrag) {
+      const note = notes.find((n) => n.id === pendingNewNoteDrag.noteId)
+        ?? pendingNotes.find((n) => n.id === pendingNewNoteDrag.noteId);
+      const finalPos = lastNewNotePositionRef.current ?? { x: pendingNewNoteDrag.noteX, y: pendingNewNoteDrag.noteY };
+      if (note) updateNote({ ...note, x: roundPosition(finalPos.x), y: roundPosition(finalPos.y) });
+      lastNewNotePositionRef.current = null;
+      setPendingNewNoteDrag(null);
+      setTool("cursor");
+      setLastCreatedNoteId(pendingNewNoteDrag.noteId);
+      didJustFinishNewNoteDragRef.current = true;
+      return;
+    }
     panStartRef.current = null;
     setIsPanning(false);
-  }, []);
+  }, [pendingNewNoteDrag, notes, pendingNotes, updateNote]);
 
   const handleEditEnd = useCallback(() => {
     setLastCreatedNoteId(null);
@@ -113,25 +180,62 @@ export default function BoardPage() {
         const el = document.elementFromPoint(clientX, clientY);
         droppedOnDelete = !!el?.closest(DELETE_ZONE_SELECTOR);
       }
+      setDragOverDeleteZone(false);
       if (droppedOnDelete) {
+        setOptimisticPosition((prev) => {
+          const next = { ...prev };
+          delete next[noteId];
+          return next;
+        });
         deleteNote(noteId);
         setSelectedNoteId((id) => (id === noteId ? null : id));
       } else {
         const finalPos = optimisticPosition[noteId];
         const note = notes.find((n) => n.id === noteId);
         if (note && finalPos) {
-          updateNote({ ...note, x: finalPos.x, y: finalPos.y });
+          updateNote({ ...note, x: roundPosition(finalPos.x), y: roundPosition(finalPos.y) });
         }
+        // Keep optimistic position so note stays at drop location until Firestore syncs
       }
-      setOptimisticPosition((prev) => {
-        const next = { ...prev };
-        delete next[noteId];
-        return next;
-      });
       setDraggingId(null);
     },
     [deleteNote, notes, optimisticPosition, updateNote]
   );
+
+  // Clear optimistic position once Firestore has the same position (avoids glitch after drop)
+  // Use 1px epsilon to avoid warp from float rounding when editing a note
+  const POSITION_EPS = 1;
+  useEffect(() => {
+    setOptimisticPosition((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const id of Object.keys(next)) {
+        const note = notes.find((n) => n.id === id);
+        if (
+          note &&
+          Math.abs(note.x - next[id].x) < POSITION_EPS &&
+          Math.abs(note.y - next[id].y) < POSITION_EPS
+        ) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [notes]);
+
+  useEffect(() => {
+    setPendingNotes((prev) => prev.filter((p) => !notes.some((n) => n.id === p.id)));
+  }, [notes]);
+
+  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+    const zone = deleteZoneRef.current;
+    if (!zone) {
+      setDragOverDeleteZone(false);
+      return;
+    }
+    setDragOverDeleteZone(isPointInRect(clientX, clientY, zone.getBoundingClientRect()));
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -148,10 +252,16 @@ export default function BoardPage() {
 
   const handleUpdate = useCallback((note: StickyNote) => {
     setDraggingId(note.id);
+    setFrontNoteIds((prev) => [...prev.filter((id) => id !== note.id), note.id]);
     setOptimisticPosition((prev) => ({
       ...prev,
-      [note.id]: { x: note.x, y: note.y },
+      [note.id]: { x: roundPosition(note.x), y: roundPosition(note.y) },
     }));
+  }, []);
+
+  const handleSelect = useCallback((noteId: string) => {
+    setFrontNoteIds((prev) => [...prev.filter((id) => id !== noteId), noteId]);
+    setSelectedNoteId(noteId);
   }, []);
 
   useEffect(() => {
@@ -175,20 +285,64 @@ export default function BoardPage() {
     };
   }, []);
 
-  const mainRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setFrontNoteIds((prev) => {
+      const ids = notes.map((n) => n.id);
+      const next = prev.filter((id) => ids.includes(id));
+      ids.forEach((id) => {
+        if (!next.includes(id)) next.push(id);
+      });
+      return next;
+    });
+  }, [notes]);
+
+  useEffect(() => {
+    panZoomRef.current = { pan, zoom };
+  }, [pan, zoom]);
+
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
-    const onWheel = (e: WheelEvent) => {
+
+    const MIN_ZOOM = 0.25;
+    const MAX_ZOOM = 3;
+
+    const handleWheel = (e: WheelEvent) => {
       if ((e.target as HTMLElement).closest("textarea")) return;
+      const rect = el.getBoundingClientRect();
+      const cursorInBoard = isPointInRect(e.clientX, e.clientY, rect);
+      const target = e.target as Node;
+      if (!cursorInBoard && !el.contains(target)) return;
       e.preventDefault();
-      setPan((prev) => ({
-        x: prev.x - e.deltaX,
-        y: prev.y - e.deltaY,
-      }));
+
+      const vx = e.clientX - rect.left;
+      const vy = e.clientY - rect.top;
+      const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
+
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        // Pinch / Ctrl+scroll / Alt+scroll: zoom canvas toward cursor
+        const scale = e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? 800 : 1;
+        const delta = -e.deltaY * scale * 0.006;
+        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, currentZoom * (1 + delta)));
+        const ratio = newZoom / currentZoom;
+        const newPanX = vx * (1 - ratio) + currentPan.x * ratio;
+        const newPanY = vy * (1 - ratio) + currentPan.y * ratio;
+        setZoom(newZoom);
+        setPan({ x: newPanX, y: newPanY });
+      } else {
+        // Two-finger scroll: pan
+        const scale = e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? 800 : 1;
+        const dx = e.deltaX * scale;
+        const dy = e.deltaY * scale;
+        setPan((prev) => ({
+          x: prev.x - dx,
+          y: prev.y - dy,
+        }));
+      }
     };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
+
+    document.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+    return () => document.removeEventListener("wheel", handleWheel, { capture: true });
   }, []);
 
   if (!boardId) {
@@ -197,10 +351,6 @@ export default function BoardPage() {
         <p className="text-zinc-500">Invalid board</p>
       </div>
     );
-  }
-
-  if (roomLoading) {
-    return <BoardPageSkeleton />;
   }
 
   return (
@@ -212,6 +362,7 @@ export default function BoardPage() {
             roomCode={boardId}
             onSave={setRoomName}
             hideCode
+            loading={roomLoading}
           />
         }
         roomCode={boardId}
@@ -224,33 +375,59 @@ export default function BoardPage() {
         className="relative flex-1 overflow-hidden"
         style={{
           minHeight: "calc(100vh - 56px - 44px)",
-          cursor: isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : "grab",
+          cursor: roomLoading ? "default" : isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : "grab",
         }}
-        onClick={handleBoardClick}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onClick={roomLoading ? undefined : handleBoardClick}
+        onPointerDown={roomLoading ? undefined : handlePointerDown}
+        onPointerMove={roomLoading ? undefined : handlePointerMove}
+        onPointerUp={roomLoading ? undefined : handlePointerUp}
+        onPointerLeave={roomLoading ? undefined : handlePointerUp}
         role="application"
         aria-label="Board canvas"
       >
+        {roomLoading ? (
+          <div className="absolute inset-0 min-h-full min-w-full">
+            <div className="absolute left-[8%] top-[12%] -rotate-2">
+              <div className="h-28 w-44 rounded-lg bg-zinc-200/90 animate-skeleton-pulse" />
+            </div>
+            <div className="absolute left-[42%] top-[8%] rotate-1">
+              <div className="h-32 w-40 rounded-lg bg-zinc-200/80 animate-skeleton-pulse" style={{ animationDelay: "0.15s" }} />
+            </div>
+            <div className="absolute right-[15%] top-[22%] -rotate-1">
+              <div className="h-24 w-36 rounded-lg bg-zinc-200/85 animate-skeleton-pulse" style={{ animationDelay: "0.3s" }} />
+            </div>
+            <div className="absolute left-[15%] top-[45%] rotate-2">
+              <div className="h-28 w-40 rounded-lg bg-zinc-200/75 animate-skeleton-pulse" style={{ animationDelay: "0.1s" }} />
+            </div>
+            <div className="absolute left-[55%] top-[38%] -rotate-1">
+              <div className="h-28 w-40 rounded-lg bg-zinc-200/80 animate-skeleton-pulse" style={{ animationDelay: "0.25s" }} />
+            </div>
+            <div className="absolute right-[25%] top-[55%] rotate-1">
+              <div className="h-24 w-32 rounded-lg bg-zinc-200/70 animate-skeleton-pulse" style={{ animationDelay: "0.35s" }} />
+            </div>
+          </div>
+        ) : (
         <div
-          className="absolute inset-0 min-h-full min-w-full"
+          className="absolute inset-0 min-h-full min-w-full origin-top-left"
           style={{
-            transform: `translate(${pan.x}px, ${pan.y}px)`,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             cursor: isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : "grab",
           }}
         >
           <div className="absolute inset-0" />
-          {notes.map((note) => {
+          {displayNotes.map((note) => {
             const opt = optimisticPosition[note.id];
+            const noteZIndex = frontNoteIds.includes(note.id)
+              ? 10 + frontNoteIds.indexOf(note.id)
+              : 1;
             return (
               <div key={note.id} data-sticky>
                 <Sticky
                   note={note}
                   onUpdate={handleUpdate}
                   onDragEnd={handleDragEnd}
-                  onSelect={setSelectedNoteId}
+                  onDragMove={handleDragMove}
+                  onSelect={handleSelect}
                   isDragging={draggingId === note.id}
                   isSelected={selectedNoteId === note.id}
                   autoFocusEdit={lastCreatedNoteId === note.id}
@@ -258,20 +435,26 @@ export default function BoardPage() {
                   onSaveNote={updateNote}
                   displayX={opt?.x}
                   displayY={opt?.y}
+                  zIndex={noteZIndex}
                 />
               </div>
             );
           })}
         </div>
+        )}
       </main>
 
       <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-6">
         <div
           ref={deleteZoneRef}
           data-delete-zone
-          className="pointer-events-auto flex cursor-default items-center gap-2 rounded-full border border-zinc-200 bg-white px-5 py-3 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          className={`pointer-events-auto flex cursor-default items-center gap-2 rounded-full border px-5 py-3 transition ${
+            dragOverDeleteZone
+              ? "border-red-400 bg-red-100 text-red-700"
+              : "border-zinc-200 bg-white hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          }`}
         >
-          <DeleteZone />
+          <DeleteZone active={dragOverDeleteZone} />
         </div>
       </div>
     </div>

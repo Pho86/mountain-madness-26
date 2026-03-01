@@ -74,7 +74,7 @@ function StickyToolbar({
 
   return (
     <div
-      className={`absolute left-1/2 bottom-full mb-2 flex min-w-[420px] max-w-[90vw] -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-zinc-600/80 bg-[#2c2c2c] py-2 pl-2 pr-3 transition-opacity duration-200 ${visible ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        className={`absolute left-1/2 bottom-full z-9999 mb-2 flex min-w-[420px] max-w-[90vw] -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-zinc-600/80 bg-[#2c2c2c] py-2 pl-2 pr-3 transition-opacity duration-200 ${visible ? "opacity-100" : "pointer-events-none opacity-0"}`}
       onPointerDown={onPointerDown}
       role="toolbar"
     >
@@ -263,6 +263,7 @@ export function Sticky({
   note,
   onUpdate,
   onDragEnd,
+  onDragMove,
   onSelect,
   isDragging,
   isSelected,
@@ -271,10 +272,12 @@ export function Sticky({
   displayX,
   displayY,
   onSaveNote,
+  zIndex = 1,
 }: {
   note: StickyNote;
   onUpdate: (n: StickyNote) => void;
   onDragEnd?: (noteId: string, clientX: number, clientY: number) => void;
+  onDragMove?: (clientX: number, clientY: number) => void;
   onSelect?: (noteId: string) => void;
   isDragging?: boolean;
   isSelected?: boolean;
@@ -283,12 +286,25 @@ export function Sticky({
   displayX?: number;
   displayY?: number;
   onSaveNote?: (note: StickyNote) => void;
+  zIndex?: number;
 }) {
   const x = displayX ?? note.x;
   const y = displayY ?? note.y;
   const [editing, setEditing] = useState(autoFocusEdit);
   const [localText, setLocalText] = useState(note.text);
   const hasAutoFocused = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const adjustTextareaHeight = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.max(ta.scrollHeight, 96)}px`;
+  }, []);
+
+  useEffect(() => {
+    if (editing) adjustTextareaHeight();
+  }, [editing, localText, adjustTextareaHeight]);
 
   useEffect(() => {
     if (!editing) setLocalText(note.text);
@@ -351,9 +367,10 @@ export function Sticky({
         ...note,
         x: noteX + dx,
         y: noteY + dy,
-      });
+        });
+      if (onDragMove) onDragMove(e.clientX, e.clientY);
     },
-    [note, onUpdate]
+    [note, onUpdate, onDragMove]
   );
 
   const handlePointerUp = useCallback(
@@ -425,7 +442,7 @@ export function Sticky({
         style={{
         left: x,
         top: y,
-        zIndex: isDragging ? 50 : 1,
+        zIndex,
       }}
       onPointerDown={handlePointerDown}
       onPointerMoveCapture={handlePointerMove}
@@ -443,19 +460,18 @@ export function Sticky({
       )}
       <div
         className={`flex min-h-[200px] flex-col rounded-lg border-2 transition-shadow ${
-          isSelected
-            ? "ring-2 ring-blue-500 ring-offset-2 border-blue-500"
-            : ""
+          isSelected ? "outline-2 outline-blue-500 outline-offset-0" : ""
         }`}
         style={{
           backgroundColor: note.color,
-          borderColor: isSelected ? "rgb(59 130 246)" : borderColor,
+          borderColor,
         }}
       >
-        <div className="flex flex-1 flex-col gap-1 p-3 select-none">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 p-3 select-none">
           {editing ? (
             <textarea
-              className="min-h-24 w-full resize-none rounded border-0 p-2 font-normal text-zinc-900 placeholder:text-zinc-600/70 outline-none select-text"
+              ref={textareaRef}
+              className="-mx-3 min-h-24 w-[calc(100%+1.5rem)] resize-none wrap-break-word border-0 px-3 py-2 font-normal text-zinc-900 placeholder:text-zinc-600/70 outline-none select-text"
               style={{
                 backgroundColor: "transparent",
                 fontSize: fontSizePx,
@@ -463,15 +479,19 @@ export function Sticky({
                 fontStyle: isItalic ? "italic" : "normal",
               }}
               value={localText}
-              onChange={(e) => setLocalText(e.target.value)}
+              onChange={(e) => {
+                setLocalText(e.target.value);
+                adjustTextareaHeight();
+              }}
               onBlur={handleBlur}
               onKeyDown={handleTextareaKeyDown}
               autoFocus
               placeholder="Type something…"
+              rows={1}
             />
           ) : (
             <p
-              className="min-h-20 flex-1 cursor-grab rounded p-2 font-normal leading-normal text-zinc-800"
+              className="min-h-20 flex-1 cursor-grab wrap-break-word rounded p-2 font-normal leading-normal text-zinc-800 whitespace-pre-wrap"
               style={{
                 fontSize: fontSizePx,
                 fontWeight: isBold ? "bold" : "normal",

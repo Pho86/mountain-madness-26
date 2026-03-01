@@ -50,7 +50,9 @@ export default function Home() {
                       className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-zinc-300 hover:bg-zinc-100"
                     >
                       <span className="font-medium text-zinc-800">
-                        {roomNames[id] ?? id}
+                        {roomNames[id] && roomNames[id] !== id
+                          ? roomNames[id]
+                          : "Unnamed room"}
                       </span>
                       <span className="font-mono text-xs text-zinc-400">
                         {id}
