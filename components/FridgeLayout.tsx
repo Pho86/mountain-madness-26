@@ -91,7 +91,7 @@ export function FridgeLayout({
   const effectiveRoomId = roomId ?? storedRoomId;
 
   return (
-    <div className="flex min-h-screen flex-col bg-fridge-outer animate-fade-in">
+    <div className="relative flex min-h-screen flex-col bg-fridge-outer animate-fade-in">
       {showJars && (
         <div
           className="flex shrink-0 flex-wrap items-end gap-4 bg-fridge-cream jars-shelf"
@@ -110,7 +110,7 @@ export function FridgeLayout({
             const baseClassName =
               "relative flex w-20 shrink-0 flex-col items-center transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fridge-cream focus:ring-offset-fridge-outer";
             const activeClassName = isActive ? " ring-2 ring-amber-600 ring-offset-2 ring-offset-fridge-cream scale-105" : "";
-            const interactiveClassName = jarsClickable ? " hover:scale-105" : " cursor-default";
+            const interactiveClassName = jarsClickable ? " hover:[animation:wiggle_0.4s_ease-in-out_infinite] hover:scale-100" : " cursor-default";
             const jarClassName = baseClassName + activeClassName + interactiveClassName;
 
             const content = (
@@ -180,6 +180,17 @@ export function FridgeLayout({
               </Link>
             )}
           </div>
+        </div>
+      )}
+
+      {showJars && (
+        <div className="pointer-events-none absolute right-90 top-0 z-10 w-48 -translate-y-2">
+          <img
+            src="/fridge/plant.png"
+            alt=""
+            aria-hidden
+            className="w-full object-contain object-top"
+          />
         </div>
       )}
 
