@@ -10,6 +10,8 @@ export type StickyNote = {
   imageScale?: number;
   /** Font size in pixels (e.g. 16). Presets: Small=12, Medium=16, Large=20 */
   fontSize?: number;
+  /** Rotation in degrees (0 = no rotation) */
+  rotation?: number;
   fontWeight?: "normal" | "bold";
   fontStyle?: "normal" | "italic";
   listStyle?: "none" | "bullet";

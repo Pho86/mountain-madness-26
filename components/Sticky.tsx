@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDownIcon, ListBulletIcon, TrashIcon } from "@heroicons/react/24/outline";
 import type { StickyNote } from "@/lib/types";
 import { getAvatarUrl } from "@/lib/avatars";
@@ -48,17 +49,32 @@ function StickyToolbar({
   onPointerDown,
   onDelete,
   visible,
+  counterRotateDeg = 0,
+  centeredByParent = false,
+  getAnchorRectRef,
 }: {
   note: StickyNote;
   onUpdate: (patch: Partial<StickyNote>) => void;
   onPointerDown: (e: React.PointerEvent) => void;
   onDelete?: () => void;
   visible: boolean;
+  counterRotateDeg?: number;
+  /** When true, toolbar is in-flow and centered by parent (no absolute positioning). */
+  centeredByParent?: boolean;
+  /** Ref to function that returns the card's bounding rect (for portal positioning at highest point). */
+  getAnchorRectRef?: React.MutableRefObject<(() => DOMRect | null) | null>;
 }) {
   const [colorOpen, setColorOpen] = useState(false);
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [presetSizeOpen, setPresetSizeOpen] = useState(false);
   const colorJustOpenedRef = useRef(false);
+  const colorTriggerRef = useRef<HTMLButtonElement>(null);
+  const customSizeTriggerRef = useRef<HTMLButtonElement>(null);
+  const presetSizeTriggerRef = useRef<HTMLButtonElement>(null);
+  const [colorDropdownPos, setColorDropdownPos] = useState<{ left: number; top: number } | null>(null);
+  const [customSizeDropdownPos, setCustomSizeDropdownPos] = useState<{ left: number; top: number } | null>(null);
+  const [presetSizeDropdownPos, setPresetSizeDropdownPos] = useState<{ left: number; top: number } | null>(null);
+  const [toolbarBarPosition, setToolbarBarPosition] = useState<{ left: number; top: number } | null>(null);
   const fontSize = note.fontSize ?? DEFAULT_FONT_SIZE;
   const [sizeInput, setSizeInput] = useState(String(fontSize));
   const presetLabel = FONT_SIZE_PRESETS.find((p) => p.value === fontSize)?.label ?? String(fontSize);
@@ -76,21 +92,105 @@ function StickyToolbar({
     }
   }, [colorOpen]);
 
+  const updateDropdownPositions = useCallback(() => {
+    const gap = 6;
+    if (colorOpen && colorTriggerRef.current) {
+      const rect = colorTriggerRef.current.getBoundingClientRect();
+      setColorDropdownPos({ left: rect.left, top: rect.top - gap });
+    } else {
+      setColorDropdownPos(null);
+    }
+    if (customSizeOpen && customSizeTriggerRef.current) {
+      const rect = customSizeTriggerRef.current.getBoundingClientRect();
+      setCustomSizeDropdownPos({ left: rect.left, top: rect.top - gap });
+    } else {
+      setCustomSizeDropdownPos(null);
+    }
+    if (presetSizeOpen && presetSizeTriggerRef.current) {
+      const rect = presetSizeTriggerRef.current.getBoundingClientRect();
+      setPresetSizeDropdownPos({ left: rect.left, top: rect.top - gap });
+    } else {
+      setPresetSizeDropdownPos(null);
+    }
+  }, [colorOpen, customSizeOpen, presetSizeOpen]);
+
+  useLayoutEffect(() => {
+    updateDropdownPositions();
+  }, [updateDropdownPositions]);
+
+  useEffect(() => {
+    if (!colorOpen && !customSizeOpen && !presetSizeOpen) return;
+    const onScrollOrResize = () => updateDropdownPositions();
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [colorOpen, customSizeOpen, presetSizeOpen, updateDropdownPositions]);
+
+  const TOOLBAR_GAP = 6;
+  useLayoutEffect(() => {
+    if (!visible || !getAnchorRectRef?.current || !centeredByParent) {
+      setToolbarBarPosition(null);
+      return;
+    }
+    const rect = getAnchorRectRef.current();
+    if (rect) {
+      setToolbarBarPosition({
+        left: rect.left + rect.width / 2,
+        top: rect.top - TOOLBAR_GAP,
+      });
+    } else {
+      setToolbarBarPosition(null);
+    }
+  }, [visible, centeredByParent, getAnchorRectRef, note.x, note.y, counterRotateDeg]);
+
+  useEffect(() => {
+    if (!visible || !toolbarBarPosition) return;
+    const onScrollOrResize = () => {
+      if (getAnchorRectRef?.current) {
+        const rect = getAnchorRectRef.current();
+        if (rect) {
+          setToolbarBarPosition({
+            left: rect.left + rect.width / 2,
+            top: rect.top - TOOLBAR_GAP,
+          });
+        }
+      }
+    };
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [visible, toolbarBarPosition, getAnchorRectRef]);
+
   const applyFontSize = (n: number) => {
     const clamped = Math.round(Math.max(10, Math.min(48, n)));
     onUpdate({ fontSize: clamped });
     setSizeInput(String(clamped));
   };
 
-  return (
+  const toolbarContent = (
     <div
-        className={`absolute left-1/2 bottom-full z-9999 mb-2 flex min-w-[420px] max-w-[90vw] -translate-x-1/2 items-center justify-between gap-1 rounded-full border border-zinc-600/80 bg-[#2c2c2c] py-2 pl-2 pr-3 transition-opacity duration-200 ${visible ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      className={`z-9999 flex min-w-[420px] max-w-[90vw] items-center justify-between gap-1 rounded-full border border-zinc-600/80 bg-[#2c2c2c] py-2 pl-2 pr-3 transition-opacity duration-200 ${visible ? "opacity-100" : "pointer-events-none opacity-0"} ${!toolbarBarPosition && !centeredByParent ? `absolute left-1/2 bottom-full -translate-x-1/2 ${counterRotateDeg !== 0 ? "mb-8" : "mb-2"}` : ""}`}
+      style={
+        toolbarBarPosition
+          ? undefined
+          : centeredByParent
+            ? { transform: `rotate(${-counterRotateDeg}deg)`, transformOrigin: "50% 100%" }
+            : { transform: `translateX(-50%) rotate(${-counterRotateDeg}deg)`, transformOrigin: "50% 100%" }
+      }
       onPointerDown={onPointerDown}
+      onMouseDown={(e) => e.preventDefault()}
       role="toolbar"
     >
       {/* 1. Color dropdown */}
       <div className="relative flex items-center">
         <button
+          ref={colorTriggerRef}
           type="button"
           onClick={() => {
             setColorOpen((o) => !o);
@@ -109,39 +209,45 @@ function StickyToolbar({
           />
           <ChevronDownIcon className="h-3.5 w-3.5 text-white/70" />
         </button>
-        {colorOpen && (
-          <div className="absolute left-0 top-full z-50 mt-1.5 min-w-[280px] rounded-xl border border-zinc-600 bg-[#2c2c2c] p-4">
-            <div className="grid grid-cols-5 gap-3">
-              {COLORS.map((c) => (
-                <button
-                  key={c.bg}
-                  type="button"
-                  onClick={() => {
-                    if (colorJustOpenedRef.current) {
-                      colorJustOpenedRef.current = false;
-                      return;
-                    }
-                    onUpdate({ color: c.bg });
-                    setColorOpen(false);
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="h-10 w-10 rounded-full border-2 transition hover:scale-110"
-                  style={{
-                    backgroundColor: c.bg,
-                    borderColor: note.color === c.bg ? "#8b5cf6" : c.border,
-                  }}
-                  title={c.label}
-                  aria-label={c.label}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        {colorOpen && colorDropdownPos && typeof document !== "undefined" &&
+          createPortal(
+            <div
+              className="fixed z-99999 min-w-[280px] rounded-xl border border-zinc-600 bg-[#2c2c2c] p-4 shadow-lg"
+              style={{ left: colorDropdownPos.left, top: colorDropdownPos.top, transform: "translateY(-100%)" }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="grid grid-cols-5 gap-3">
+                {COLORS.map((c) => (
+                  <button
+                    key={c.bg}
+                    type="button"
+                    onClick={() => {
+                      if (colorJustOpenedRef.current) {
+                        colorJustOpenedRef.current = false;
+                      } else {
+                        onUpdate({ color: c.bg });
+                        setColorOpen(false);
+                      }
+                    }}
+                    className="h-10 w-10 rounded-full border-2 transition hover:scale-110"
+                    style={{
+                      backgroundColor: c.bg,
+                      borderColor: note.color === c.bg ? "#8b5cf6" : c.border,
+                    }}
+                    title={c.label}
+                    aria-label={c.label}
+                  />
+                ))}
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
 
       {/* 2. Font size custom dropdown (Aa) */}
       <div className="relative flex items-center">
         <button
+          ref={customSizeTriggerRef}
           type="button"
           onClick={() => {
             setCustomSizeOpen((o) => !o);
@@ -156,40 +262,47 @@ function StickyToolbar({
           <span className="text-sm font-medium">Aa</span>
           <ChevronDownIcon className="h-3.5 w-3.5 text-white/70" />
         </button>
-        {customSizeOpen && (
-          <div className="absolute left-0 top-full z-50 mt-1.5 rounded-lg border border-zinc-600 bg-[#2c2c2c] p-3">
-            <p className="mb-2 text-xs font-medium text-white/70">Font size (px)</p>
-            <input
-              type="number"
-              min={10}
-              max={48}
-              value={sizeInput}
-              onChange={(e) => setSizeInput(e.target.value)}
-              onBlur={() => {
-                const n = parseInt(sizeInput, 10);
-                if (!Number.isNaN(n)) applyFontSize(n);
-                else setSizeInput(String(fontSize));
-                setCustomSizeOpen(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
+        {customSizeOpen && customSizeDropdownPos && typeof document !== "undefined" &&
+          createPortal(
+            <div
+              className="fixed z-99999 rounded-lg border border-zinc-600 bg-[#2c2c2c] p-3 shadow-lg"
+              style={{ left: customSizeDropdownPos.left, top: customSizeDropdownPos.top, transform: "translateY(-100%)" }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <p className="mb-2 text-xs font-medium text-white/70">Font size (px)</p>
+              <input
+                type="number"
+                min={10}
+                max={48}
+                value={sizeInput}
+                onChange={(e) => setSizeInput(e.target.value)}
+                onBlur={() => {
                   const n = parseInt(sizeInput, 10);
                   if (!Number.isNaN(n)) applyFontSize(n);
+                  else setSizeInput(String(fontSize));
                   setCustomSizeOpen(false);
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              className="w-20 rounded border border-zinc-500 px-2 py-1.5 text-sm outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-white/30"
-              style={{ backgroundColor: "#3f3f46", color: "#fff" }}
-              autoFocus
-            />
-          </div>
-        )}
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const n = parseInt(sizeInput, 10);
+                    if (!Number.isNaN(n)) applyFontSize(n);
+                    setCustomSizeOpen(false);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+                className="w-20 rounded border border-zinc-500 px-2 py-1.5 text-sm outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-white/30"
+                style={{ backgroundColor: "#3f3f46", color: "#fff" }}
+                autoFocus
+              />
+            </div>,
+            document.body
+          )}
       </div>
 
       {/* 3. Font size presets dropdown (Small / Medium / Large) */}
       <div className="relative flex items-center">
         <button
+          ref={presetSizeTriggerRef}
           type="button"
           onClick={() => {
             setPresetSizeOpen((o) => !o);
@@ -204,23 +317,29 @@ function StickyToolbar({
           <span className="text-sm">{presetLabel}</span>
           <ChevronDownIcon className="h-3.5 w-3.5 text-white/70" />
         </button>
-        {presetSizeOpen && (
-          <div className="absolute left-0 top-full z-50 mt-1.5 rounded-lg border border-zinc-600 bg-[#2c2c2c] py-1">
-            {FONT_SIZE_PRESETS.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => {
-                  applyFontSize(p.value);
-                  setPresetSizeOpen(false);
-                }}
-                className={`w-full px-4 py-2 text-left text-sm text-white/90 hover:bg-white/10 ${fontSize === p.value ? "bg-[#8b5cf6] font-medium text-white" : ""}`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {presetSizeOpen && presetSizeDropdownPos && typeof document !== "undefined" &&
+          createPortal(
+            <div
+              className="fixed z-99999 rounded-lg border border-zinc-600 bg-[#2c2c2c] py-1 shadow-lg"
+              style={{ left: presetSizeDropdownPos.left, top: presetSizeDropdownPos.top, transform: "translateY(-100%)" }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              {FONT_SIZE_PRESETS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => {
+                    applyFontSize(p.value);
+                    setPresetSizeOpen(false);
+                  }}
+                  className={`w-full px-4 py-2 text-left text-sm text-white/90 hover:bg-white/10 ${fontSize === p.value ? "bg-[#8b5cf6] font-medium text-white" : ""}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>,
+            document.body
+          )}
       </div>
 
       <div className="h-5 w-px bg-white/15" aria-hidden />
@@ -274,6 +393,24 @@ function StickyToolbar({
       )}
     </div>
   );
+
+  if (toolbarBarPosition && getAnchorRectRef && typeof document !== "undefined") {
+    return createPortal(
+      <div
+        style={{
+          position: "fixed",
+          left: toolbarBarPosition.left,
+          top: toolbarBarPosition.top,
+          transform: "translate(-50%, -100%)",
+          zIndex: 9999,
+        }}
+      >
+        {toolbarContent}
+      </div>,
+      document.body
+    );
+  }
+  return toolbarContent;
 }
 
 export function Sticky({
@@ -295,6 +432,7 @@ export function Sticky({
   dragPosition,
   zoom,
   zIndex = 1,
+  displayRotation,
 }: {
   note: StickyNote;
   onUpdate: (n: StickyNote) => void;
@@ -316,9 +454,12 @@ export function Sticky({
   /** Board zoom (1 = 100%); needed to convert pointer delta to content space */
   zoom?: number;
   zIndex?: number;
+  /** Display rotation in degrees (for optimistic updates during rotate gesture) */
+  displayRotation?: number;
 }) {
   const x = displayX ?? note.x;
   const y = displayY ?? note.y;
+  const rotationDeg = displayRotation ?? note.rotation ?? 0;
   const zoomLevel = zoom ?? 1;
   const dragOrigin = dragPosition ?? { x: note.x, y: note.y };
   const [editing, setEditing] = useState(autoFocusEdit);
@@ -388,6 +529,7 @@ export function Sticky({
   } | null>(null);
 
   const [isResizing, setIsResizing] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
   const [resizeScale, setResizeScale] = useState(1);
   const resizeStartRef = useRef<{
     centerX: number;
@@ -397,6 +539,7 @@ export function Sticky({
   } | null>(null);
   const resizeScaleRef = useRef(1);
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const getAnchorRectRef = useRef<(() => DOMRect | null) | null>(null);
 
   const getScaleFromPointer = useCallback(
     (clientX: number, clientY: number): number => {
@@ -456,11 +599,77 @@ export function Sticky({
     [note, onSaveNote]
   );
 
+  const rotationStartRef = useRef<{
+    startAngle: number;
+    startRotation: number;
+    lastAngle: number;
+    accumulatedDeg: number;
+  } | null>(null);
+
+  const getCenter = useCallback(() => {
+    const card = cardRef.current;
+    if (!card) return null;
+    const rect = card.getBoundingClientRect();
+    return { centerX: rect.left + rect.width / 2, centerY: rect.top + rect.height / 2 };
+  }, []);
+
+  const handleRotatePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.stopPropagation();
+      setIsRotating(true);
+      const center = getCenter();
+      if (!center) return;
+      const { centerX, centerY } = center;
+      const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+      rotationStartRef.current = {
+        startAngle,
+        startRotation: rotationDeg,
+        lastAngle: startAngle,
+        accumulatedDeg: 0,
+      };
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [rotationDeg, getCenter]
+  );
+
+  const handleRotatePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const start = rotationStartRef.current;
+      if (!start) return;
+      const center = getCenter();
+      if (!center) return;
+      const { centerX, centerY } = center;
+      const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+      let deltaRad = currentAngle - start.lastAngle;
+      while (deltaRad > Math.PI) deltaRad -= 2 * Math.PI;
+      while (deltaRad <= -Math.PI) deltaRad += 2 * Math.PI;
+      start.lastAngle = currentAngle;
+      start.accumulatedDeg += (deltaRad * 180) / Math.PI;
+      const newRotation = Math.round((start.startRotation + start.accumulatedDeg) * 10) / 10;
+      onUpdate({ ...note, rotation: newRotation });
+    },
+    [note, getCenter, onUpdate]
+  );
+
+  const handleRotatePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const hadRotate = rotationStartRef.current !== null;
+      rotationStartRef.current = null;
+      setIsRotating(false);
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      if (hadRotate && onSaveNote) {
+        onSaveNote({ ...note, rotation: rotationDeg });
+      }
+    },
+    [note, rotationDeg, onSaveNote]
+  );
+
   const DRAG_THRESHOLD = 5;
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if ((e.target as HTMLElement).closest("button")) return;
+      if ((e.target as HTMLElement).closest("[data-rotation-handle]")) return;
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
@@ -572,6 +781,8 @@ export function Sticky({
         left: x,
         top: y,
         zIndex,
+        transform: `rotate(${rotationDeg}deg)`,
+        transformOrigin: "50% 50%",
         ...(note.imageUrl && { width: IMAGE_BASE_W * imageScale }),
       }}
       onPointerDown={handlePointerDown}
@@ -581,13 +792,31 @@ export function Sticky({
       onPointerLeave={handlePointerUp}
     >
       {showToolbar && (
-        <StickyToolbar
-          note={note}
-          onUpdate={handleToolbarUpdate}
-          onPointerDown={(e) => e.stopPropagation()}
-          onDelete={onDelete}
-          visible={!isDragging}
-        />
+        <div
+          className="pointer-events-none absolute left-0 right-0 flex justify-center"
+          style={{
+            bottom: "100%",
+            marginBottom: rotationDeg !== 0 ? "2rem" : "0.5rem",
+          }}
+        >
+          <div className="pointer-events-auto">
+            {(() => {
+              getAnchorRectRef.current = () => cardRef.current?.getBoundingClientRect() ?? null;
+              return (
+                <StickyToolbar
+                  note={note}
+                  onUpdate={handleToolbarUpdate}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onDelete={onDelete}
+                  visible={!isDragging && !isRotating}
+                  counterRotateDeg={rotationDeg}
+                  centeredByParent
+                  getAnchorRectRef={getAnchorRectRef}
+                />
+              );
+            })()}
+          </div>
+        </div>
       )}
       <div
         ref={cardRef}
@@ -728,6 +957,24 @@ export function Sticky({
               onPointerCancel={handleResizePointerUp}
             />
           ))}
+        </div>
+      )}
+      {isSelected && (
+        <div
+          data-rotation-handle
+          className="absolute left-1/2 bottom-0 z-10 h-6 w-6 -translate-x-1/2 translate-y-[calc(100%+0.5rem)] cursor-grab rounded-full border-2 border-blue-500 bg-white shadow hover:bg-blue-50 hover:scale-110 active:cursor-grabbing pointer-events-auto"
+          role="slider"
+          aria-label="Rotate"
+          aria-valuenow={rotationDeg}
+          onPointerDown={handleRotatePointerDown}
+          onPointerMove={handleRotatePointerMove}
+          onPointerUp={handleRotatePointerUp}
+          onPointerCancel={handleRotatePointerUp}
+        >
+          <svg className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.6" />
+            <path d="M21 3v6h-6" />
+          </svg>
         </div>
       )}
     </div>

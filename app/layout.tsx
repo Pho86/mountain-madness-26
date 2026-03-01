@@ -31,8 +31,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <RedirectIfNoAvatar />
-          <AuthHeader />
+          {/* <RedirectIfNoAvatar /> */}
+          {/* <AuthHeader /> */}
           {children}
         </Providers>
       </body>

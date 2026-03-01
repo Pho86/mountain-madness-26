@@ -3,26 +3,36 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --fridge-cream: #FBE8D2;
+  --fridge-outer: #FBE8D2;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-fridge-cream: var(--fridge-cream);
+  --color-fridge-outer: var(--fridge-outer);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
+  background-color: var(--fridge-cream);
+  min-height: 100vh;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Board canvas: cream frame with fridge image centered */
+.bg-fridge-canvas {
+  background-color: var(--fridge-cream);
+  background-image: url("/fridge/Fridge.png");
+  background-size: contain;
+  background-position: top center;
+  background-repeat: no-repeat;
+  margin: 2rem;
+  margin-top: 0;
+  box-sizing: border-box;
 }
 
 /* Inputs always readable: light background + dark text (avoids white-on-white in dark mode) */

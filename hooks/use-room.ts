@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const ROOMS = "rooms";
@@ -25,20 +25,24 @@ export function useRoom(roomId: string | null) {
       setLoading(false);
       return;
     }
+    let cancelled = false;
+    setLoading(true);
     const ref = doc(db, ROOMS, roomId);
-    const unsub = onSnapshot(
-      ref,
-      (snapshot) => {
+    getDoc(ref)
+      .then((snapshot) => {
+        if (cancelled) return;
         const data = snapshot.data();
         setNameState((data?.name as string) ?? roomId);
-        setLoading(false);
-      },
-      () => {
-        setNameState(roomId);
-        setLoading(false);
-      }
-    );
-    return () => unsub();
+      })
+      .catch(() => {
+        if (!cancelled) setNameState(roomId);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [roomId]);
 
   const ensureRoomExists = useCallback(() => {
@@ -50,9 +54,11 @@ export function useRoom(roomId: string | null) {
   const setName = useCallback(
     (newName: string) => {
       if (!roomId) return;
-      const trimmed = newName.trim() || roomId;
+      const trimmed = (newName.trim() || roomId).slice(0, 18);
       const ref = doc(db, ROOMS, roomId);
-      setDoc(ref, { name: trimmed }, { merge: true });
+      setDoc(ref, { name: trimmed }, { merge: true })
+        .then(() => setNameState(trimmed))
+        .catch(() => {});
     },
     [roomId]
   );

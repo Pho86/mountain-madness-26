@@ -45,83 +45,54 @@ export function useBoardCursors(
 
   useEffect(() => {
     if (!boardId || !userId) return;
-
-    const ref = cursorsRef(boardId);
-    const unsub = onSnapshot(ref, (snapshot) => {
-      const now = Date.now();
-      const list: CursorPresence[] = [];
-      snapshot.forEach((d) => {
-        if (d.id === userId) return;
-        const data = d.data();
-        const updatedAt =
-          data?.updatedAt && typeof data.updatedAt.toMillis === "function"
-            ? data.updatedAt.toMillis()
-            : 0;
-        if (now - updatedAt > CURSOR_STALE_MS) return;
-        const x = typeof data?.x === "number" ? data.x : 0;
-        const y = typeof data?.y === "number" ? data.y : 0;
-        list.push({
-          userId: d.id,
-          x,
-          y,
-          displayName: (data?.displayName as string) || "Someone",
-          updatedAt,
-        });
-      });
-      setOtherCursors(list);
-    });
-    return () => unsub();
+    // DISABLED to reduce Firebase costs: real-time cursor presence
+    // const ref = cursorsRef(boardId);
+    // const unsub = onSnapshot(ref, (snapshot) => {
+    //   const now = Date.now();
+    //   const list: CursorPresence[] = [];
+    //   snapshot.forEach((d) => {
+    //     if (d.id === userId) return;
+    //     const data = d.data();
+    //     const updatedAt =
+    //       data?.updatedAt && typeof data.updatedAt.toMillis === "function"
+    //         ? data.updatedAt.toMillis()
+    //         : 0;
+    //     if (now - updatedAt > CURSOR_STALE_MS) return;
+    //     const x = typeof data?.x === "number" ? data.x : 0;
+    //     const y = typeof data?.y === "number" ? data.y : 0;
+    //     list.push({
+    //       userId: d.id,
+    //       x,
+    //       y,
+    //       displayName: (data?.displayName as string) || "Someone",
+    //       updatedAt,
+    //     });
+    //   });
+    //   setOtherCursors(list);
+    // });
+    // return () => unsub();
+    return () => {};
   }, [boardId, userId]);
 
   const setMyCursor = useCallback(
-    (contentX: number, contentY: number) => {
-      if (!boardId || !userId) return;
-      const now = Date.now();
-      pendingRef.current = { x: contentX, y: contentY };
-      if (now - lastWriteRef.current < CURSOR_THROTTLE_MS) {
-        if (rafRef.current == null) {
-          rafRef.current = requestAnimationFrame(() => {
-            rafRef.current = null;
-            const p = pendingRef.current;
-            if (p) {
-              pendingRef.current = null;
-              lastWriteRef.current = Date.now();
-              setDoc(
-                cursorRef(boardId, userId),
-                {
-                  x: p.x,
-                  y: p.y,
-                  displayName: displayName || "Someone",
-                  updatedAt: serverTimestamp(),
-                },
-                { merge: true }
-              );
-            }
-          });
-        }
-        return;
-      }
-      lastWriteRef.current = now;
-      pendingRef.current = null;
-      setDoc(
-        cursorRef(boardId, userId),
-        {
-          x: contentX,
-          y: contentY,
-          displayName: displayName || "Someone",
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+    (_contentX: number, _contentY: number) => {
+      // DISABLED to reduce Firebase costs: no cursor writes
+      // if (!boardId || !userId) return;
+      // const now = Date.now();
+      // pendingRef.current = { x: contentX, y: contentY };
+      // ...
+      // setDoc(cursorRef(boardId, userId), { ... }, { merge: true });
     },
-    [boardId, userId, displayName]
+    [] // [boardId, userId, displayName]
   );
 
   useEffect(() => {
     if (!boardId || !userId) return;
-    return () => {
-      deleteDoc(cursorRef(boardId, userId)).catch(() => {});
-    };
+    // DISABLED to reduce Firebase costs: no cursor cleanup write
+    // return () => {
+    //   deleteDoc(cursorRef(boardId, userId)).catch(() => {});
+    // };
+    return () => {};
   }, [boardId, userId]);
 
   return { otherCursors, setMyCursor };

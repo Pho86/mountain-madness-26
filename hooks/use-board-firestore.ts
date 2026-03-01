@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   collection,
   deleteDoc,
   doc,
-  onSnapshot,
+  getDocs,
   setDoc,
   updateDoc,
 } from "firebase/firestore";
@@ -34,6 +34,7 @@ function toDoc(note: StickyNote) {
     ...(note.imageUrl != null && { imageUrl: note.imageUrl }),
     ...(note.imageScale != null && { imageScale: note.imageScale }),
     ...(note.fontSize != null && { fontSize: note.fontSize }),
+    ...(note.rotation != null && { rotation: note.rotation }),
     ...(note.fontWeight != null && { fontWeight: note.fontWeight }),
     ...(note.fontStyle != null && { fontStyle: note.fontStyle }),
     ...(note.listStyle != null && { listStyle: note.listStyle }),
@@ -61,6 +62,7 @@ function fromDoc(data: {
   imageUrl?: string;
   imageScale?: number;
   fontSize?: number | "sm" | "base" | "lg";
+  rotation?: number;
   fontWeight?: "normal" | "bold";
   fontStyle?: "normal" | "italic";
   listStyle?: "none" | "bullet";
@@ -83,6 +85,7 @@ function fromDoc(data: {
       ? data.imageScale
       : undefined,
     fontSize: normalizeFontSize(data.fontSize),
+    rotation: typeof data.rotation === "number" ? data.rotation : undefined,
     fontWeight: data.fontWeight ?? "normal",
     fontStyle: data.fontStyle ?? "normal",
     listStyle: data.listStyle ?? "none",
@@ -95,34 +98,46 @@ function fromDoc(data: {
 export function useBoardFirestore(boardId: string | null) {
   const [notes, setNotes] = useState<StickyNote[]>([]);
   const [connected, setConnected] = useState(false);
+  const retriedRef = useRef(false);
+
+  const loadNotes = useCallback(async () => {
+    if (!boardId) return;
+    try {
+      const snapshot = await getDocs(notesRef(boardId));
+      const list: StickyNote[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data() as Parameters<typeof fromDoc>[0];
+        if (data) list.push(fromDoc(data));
+      });
+      list.sort((a, b) => a.createdAt - b.createdAt);
+      setNotes(list);
+      setConnected(true);
+    } catch (err) {
+      setConnected(false);
+      setNotes([]);
+      if (!retriedRef.current) {
+        retriedRef.current = true;
+        setTimeout(() => loadNotes(), 3000);
+      }
+    }
+  }, [boardId]);
 
   useEffect(() => {
-    if (!boardId) return;
-    const ref = notesRef(boardId);
-    const unsub = onSnapshot(
-      ref,
-      (snapshot) => {
-        setConnected(true);
-        const list: StickyNote[] = [];
-        snapshot.forEach((d) => {
-          const data = d.data() as Parameters<typeof fromDoc>[0];
-          if (data) list.push(fromDoc(data));
-        });
-        list.sort((a, b) => a.createdAt - b.createdAt);
-        setNotes(list);
-      },
-      () => setConnected(false)
-    );
-    return () => {
-      unsub();
+    if (!boardId) {
+      setNotes([]);
       setConnected(false);
-    };
-  }, [boardId]);
+      retriedRef.current = false;
+      return;
+    }
+    retriedRef.current = false;
+    loadNotes();
+  }, [boardId, loadNotes]);
 
   const addNote = useCallback(
     (note: StickyNote) => {
       if (!boardId) return;
       setDoc(noteRef(boardId, note.id), toDoc(note));
+      setNotes((prev) => [...prev, note].sort((a, b) => a.createdAt - b.createdAt));
     },
     [boardId]
   );
@@ -138,12 +153,16 @@ export function useBoardFirestore(boardId: string | null) {
         ...(note.imageUrl != null && { imageUrl: note.imageUrl }),
         ...(note.imageScale != null && { imageScale: note.imageScale }),
         ...(note.fontSize != null && { fontSize: note.fontSize }),
+        ...(note.rotation != null && { rotation: note.rotation }),
         ...(note.fontWeight != null && { fontWeight: note.fontWeight }),
         ...(note.fontStyle != null && { fontStyle: note.fontStyle }),
         ...(note.listStyle != null && { listStyle: note.listStyle }),
         ...(note.authorName != null && { authorName: note.authorName }),
         ...(note.authorIconId != null && { authorIconId: note.authorIconId }),
       });
+      setNotes((prev) =>
+        prev.map((n) => (n.id === note.id ? note : n))
+      );
     },
     [boardId]
   );
@@ -152,6 +171,7 @@ export function useBoardFirestore(boardId: string | null) {
     (id: string) => {
       if (!boardId) return;
       deleteDoc(noteRef(boardId, id));
+      setNotes((prev) => prev.filter((n) => n.id !== id));
     },
     [boardId]
   );

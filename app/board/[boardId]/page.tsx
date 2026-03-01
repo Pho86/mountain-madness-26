@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useBoardFirestore } from "@/hooks/use-board-firestore";
 import { useBoardCursors } from "@/hooks/use-board-cursors";
 import { upload } from "@vercel/blob/client";
@@ -33,7 +34,7 @@ function roundPosition(v: number) {
 export default function BoardPage() {
   const params = useParams();
   const boardId = typeof params.boardId === "string" ? params.boardId : null;
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { addRoom } = useUserRooms(user?.uid ?? null);
   const { name: roomName, setName: setRoomName, ensureRoomExists, loading: roomLoading } = useRoom(boardId);
   const { notes, connected, addNote, updateNote, deleteNote } =
@@ -54,6 +55,7 @@ export default function BoardPage() {
   const [dragOverDeleteZone, setDragOverDeleteZone] = useState(false);
   const [frontNoteIds, setFrontNoteIds] = useState<string[]>([]);
   const [optimisticPosition, setOptimisticPosition] = useState<Record<string, { x: number; y: number }>>({});
+  const [optimisticRotation, setOptimisticRotation] = useState<Record<string, number>>({});
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const panZoomRef = useRef({ pan: { x: 0, y: 0 }, zoom: 1 });
@@ -89,6 +91,7 @@ export default function BoardPage() {
 
   const handleBoardClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (tool === "move") return;
       if (didPanRef.current) {
         didPanRef.current = false;
         return;
@@ -122,7 +125,7 @@ export default function BoardPage() {
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if ((e.target as HTMLElement).closest("[data-sticky]")) return;
+      if (tool !== "move" && (e.target as HTMLElement).closest("[data-sticky]")) return;
       if (tool === "sticky") {
         const rect = e.currentTarget.getBoundingClientRect();
         const contentX = (e.clientX - rect.left - pan.x) / zoom;
@@ -150,6 +153,7 @@ export default function BoardPage() {
         return;
       }
       if (tool !== "move") return;
+      didPanRef.current = true;
       setIsPanning(true);
       panStartRef.current = {
         clientX: e.clientX,
@@ -157,6 +161,7 @@ export default function BoardPage() {
         panX: pan.x,
         panY: pan.y,
       };
+      e.currentTarget.setPointerCapture(e.pointerId);
     },
     [tool, pan.x, pan.y, zoom, addNote, createSticky]
   );
@@ -346,6 +351,22 @@ export default function BoardPage() {
     });
   }, [notes]);
 
+  const ROTATION_EPS = 0.5;
+  useEffect(() => {
+    setOptimisticRotation((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const id of Object.keys(next)) {
+        const note = notes.find((n) => n.id === id);
+        if (note != null && typeof note.rotation === "number" && Math.abs(note.rotation - next[id]) < ROTATION_EPS) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [notes]);
+
   useEffect(() => {
     setPendingNotes((prev) => prev.filter((p) => !notes.some((n) => n.id === p.id)));
   }, [notes]);
@@ -386,6 +407,13 @@ export default function BoardPage() {
 
   const handleUpdate = useCallback((note: StickyNote) => {
     const id = note.id;
+    if (note.rotation != null) {
+      setOptimisticRotation((prev) => ({ ...prev, [id]: note.rotation! }));
+      if (!draggingSelectionRef.current) {
+        setFrontNoteIds((prev) => [...prev.filter((i) => i !== id), id]);
+        return;
+      }
+    }
     setDraggingId(id);
     setFrontNoteIds((prev) => [...prev.filter((i) => i !== id), id]);
 
@@ -450,6 +478,20 @@ export default function BoardPage() {
       });
     },
     [selectedNoteIds, notes, pendingNotes, updateNote]
+  );
+
+  const handleSaveNote = useCallback(
+    (note: StickyNote) => {
+      updateNote(note);
+      if (note.rotation != null) {
+        setOptimisticRotation((prev) => {
+          const next = { ...prev };
+          delete next[note.id];
+          return next;
+        });
+      }
+    },
+    [updateNote]
   );
 
   const handleSelect = useCallback((noteId: string, shiftKey?: boolean) => {
@@ -601,23 +643,119 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100 animate-fade-in">
-      <RoomPageHeader
-        left={
-          <EditableRoomName
-            name={roomName}
-            roomCode={boardId}
-            onSave={setRoomName}
-            hideCode
-            loading={roomLoading}
-          />
-        }
-        roomCode={boardId}
-      />
+    <div className="flex min-h-screen flex-col bg-fridge-outer animate-fade-in">
+      {/* Room name/code live on the fridge plaque below */}
+
+      {/* Shelf on top of the fridge: knob + jars + sign out */}
+      <div
+        className="flex shrink-0 flex-wrap items-end gap-4 bg-fridge-cream mx-12"
+        style={{ minHeight: "72px" }}
+        aria-label="Top of fridge"
+      >
+        <img
+          src="/fridge/Knob.png"
+          alt=""
+          className="h-8 w-auto object-contain"
+          aria-hidden
+        />
+        {[
+          {
+            slug: "notes",
+            label: "NOTES",
+            bodyColor: "#D43E3E",
+            labelBg: "#9B5573",
+            labelBorder: "#7A4463",
+            labelText: "#E9D7C5",
+          },
+          {
+            slug: "calendar",
+            label: "CALENDAR",
+            bodyColor: "#E7A24B",
+            labelBg: "#E9D7C5",
+            labelBorder: "#7088B4",
+            labelText: "#4D6A9E",
+          },
+          {
+            slug: "chores",
+            label: "CHORES",
+            bodyColor: "#707EA7",
+            labelBg: "#D43E3E",
+            labelBorder: "#A63030",
+            labelText: "#E9D7C5",
+          },
+          {
+            slug: "budget",
+            label: "BUDGET",
+            bodyColor: "#C8A2D3",
+            labelBg: "#9B5573",
+            labelBorder: "#7A4463",
+            labelText: "#E9D7C5",
+          },
+          {
+            slug: "profile",
+            label: "PROFILE",
+            bodyColor: "#E7A24B",
+            labelBg: "#4D6A9E",
+            labelBorder: "#7088B4",
+            labelText: "#E9D7C5",
+          },
+        ].map(({ slug, label, bodyColor, labelBg, labelBorder, labelText }) => {
+          const href = slug === "notes" ? `/board/${boardId}` : `/${slug}`;
+          return (
+            <Link
+              key={slug}
+              href={href}
+              className="relative flex w-20 shrink-0 flex-col items-center transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fridge-cream focus:ring-offset-fridge-outer"
+              aria-label={label}
+            >
+              <div
+                className="relative h-10 w-full mt-3 rounded-b rounded-t-sm pt-2"
+                style={{ backgroundColor: bodyColor }}
+              >
+                <span
+                  className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase"
+                  style={{
+                    backgroundColor: labelBg,
+                    borderColor: labelBorder,
+                    color: labelText,
+                    textShadow: "0 0 1px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  {label}
+                </span>
+              </div>
+              <img
+                src={`/jars/${slug}-jar-lid.svg`}
+                alt=""
+                className="absolute left-0 top-0 z-10 h-6 w-full object-contain object-center"
+                aria-hidden
+              />
+            </Link>
+          );
+        })}
+        <div className="ml-auto flex items-end gap-2">
+          <button
+            type="button"
+            onClick={() => signOut()}
+            className="relative flex h-14 min-w-40 items-center justify-center overflow-hidden bg-transparent transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-700 focus:ring-offset-2 focus:ring-offset-fridge-cream"
+            style={{
+              backgroundImage: "url(/jars/signout-pot.svg)",
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+            }}
+            aria-label="Sign out"
+          >
+            <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white drop-shadow-md">
+              Sign out
+            </span>
+          </button>
+        </div>
+      </div>
 
       <main
         ref={mainRef}
-        className="relative flex-1 overflow-hidden"
+        className="relative flex-1 overflow-hidden bg-fridge-canvas"
         style={{
           minHeight: "calc(100vh - 56px)",
           cursor: roomLoading ? "default" : isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : tool === "move" ? "grab" : "default",
@@ -630,6 +768,34 @@ export default function BoardPage() {
         role="application"
         aria-label="Board canvas"
       >
+        {/* Fridge name + room code plaque (on the fridge, top right) */}
+        {!roomLoading && boardId && (
+          <div
+            className="absolute right-6 top-6 z-10"
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onPointerMove={(e) => e.stopPropagation()}
+          >
+            <div
+              className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
+              style={{
+                backgroundColor: "var(--fridge-cream)",
+                borderColor: "#5c4033",
+              }}
+            >
+              <EditableRoomName
+                name={roomName || boardId || "Stella's Fridge"}
+                roomCode={boardId}
+                onSave={setRoomName}
+                hideCode={false}
+                loading={false}
+                className="flex flex-col items-end gap-0.5 font-serif text-right"
+                inputClassName="w-full min-w-0 border-0 border-b-2 border-zinc-600 bg-transparent py-0.5 text-right text-lg font-medium text-zinc-900 outline-none focus:ring-0 [background:transparent]"
+                compact
+              />
+            </div>
+          </div>
+        )}
         {roomLoading ? (
           <div className="absolute inset-0 min-h-full min-w-full">
             <div className="absolute left-[8%] top-[12%] -rotate-2">
@@ -664,6 +830,7 @@ export default function BoardPage() {
             const opt = optimisticPosition[note.id];
             const noteX = opt?.x ?? note.x;
             const noteY = opt?.y ?? note.y;
+            const noteRotation = optimisticRotation[note.id] ?? note.rotation ?? 0;
             const noteZIndex = frontNoteIds.includes(note.id)
               ? 10 + frontNoteIds.indexOf(note.id)
               : 1;
@@ -685,13 +852,14 @@ export default function BoardPage() {
                   showToolbar={selectedNoteIds.has(note.id) && !note.imageUrl && (selectedNoteIds.size <= 1 || note.id === primarySelectedId)}
                   autoFocusEdit={lastCreatedNoteId === note.id}
                   onEditEnd={handleEditEnd}
-                  onSaveNote={updateNote}
+                  onSaveNote={handleSaveNote}
                   onToolbarPatch={selectedNoteIds.size > 0 ? handleToolbarPatch : undefined}
                   onDelete={handleDeleteSelected}
                   dragPosition={{ x: noteX, y: noteY }}
                   zoom={zoom}
                   displayX={0}
                   displayY={0}
+                  displayRotation={noteRotation}
                   zIndex={noteZIndex}
                 />
               </div>
