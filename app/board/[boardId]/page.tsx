@@ -13,7 +13,6 @@ import { BoardToolbar } from "@/components/BoardToolbar";
 import { DeleteZone } from "@/components/DeleteZone";
 import { EditableRoomName } from "@/components/EditableRoomName";
 import { FridgeLayout } from "@/components/FridgeLayout";
-import { BoardPageSkeleton } from "@/components/BoardPageSkeleton";
 import { useRoom } from "@/hooks/use-room";
 import type { StickyNote } from "@/lib/types";
 
@@ -766,26 +765,7 @@ export default function BoardPage() {
           </div>
         )}
         {roomLoading ? (
-          <div className="absolute inset-0 min-h-full min-w-full">
-            <div className="absolute left-[8%] top-[12%] -rotate-2">
-              <div className="h-28 w-44 rounded-lg bg-zinc-200/90 animate-skeleton-pulse" />
-            </div>
-            <div className="absolute left-[42%] top-[8%] rotate-1">
-              <div className="h-32 w-40 rounded-lg bg-zinc-200/80 animate-skeleton-pulse" style={{ animationDelay: "0.15s" }} />
-            </div>
-            <div className="absolute right-[15%] top-[22%] -rotate-1">
-              <div className="h-24 w-36 rounded-lg bg-zinc-200/85 animate-skeleton-pulse" style={{ animationDelay: "0.3s" }} />
-            </div>
-            <div className="absolute left-[15%] top-[45%] rotate-2">
-              <div className="h-28 w-40 rounded-lg bg-zinc-200/75 animate-skeleton-pulse" style={{ animationDelay: "0.1s" }} />
-            </div>
-            <div className="absolute left-[55%] top-[38%] -rotate-1">
-              <div className="h-28 w-40 rounded-lg bg-zinc-200/80 animate-skeleton-pulse" style={{ animationDelay: "0.25s" }} />
-            </div>
-            <div className="absolute right-[25%] top-[55%] rotate-1">
-              <div className="h-24 w-32 rounded-lg bg-zinc-200/70 animate-skeleton-pulse" style={{ animationDelay: "0.35s" }} />
-            </div>
-          </div>
+          <div className="absolute inset-0 min-h-full min-w-full" />
         ) : (
         <div
           className="absolute inset-0 min-h-full min-w-full origin-top-left"

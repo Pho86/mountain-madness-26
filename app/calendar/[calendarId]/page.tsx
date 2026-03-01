@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/hooks/use-user-rooms";
 import { useRoom } from "@/hooks/use-room";
 import { BoardCalendar } from "@/components/BoardCalendar";
-import { CalendarPageSkeleton } from "@/components/CalendarPageSkeleton";
 import { EditableRoomName } from "@/components/EditableRoomName";
 import { FridgeLayout } from "@/components/FridgeLayout";
 
@@ -46,7 +45,11 @@ export default function CalendarPage() {
   }
 
   if (roomLoading) {
-    return <CalendarPageSkeleton />;
+    return (
+      <FridgeLayout showJars>
+        <div className="flex min-h-full flex-1 flex-col" />
+      </FridgeLayout>
+    );
   }
 
   return (

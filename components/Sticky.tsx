@@ -382,7 +382,7 @@ function StickyToolbar({
       <button
         type="button"
         onClick={() => onUpdate({ fontWeight: (note.fontWeight ?? "normal") === "bold" ? "normal" : "bold" })}
-        className={`rounded-md px-3 py-1.5 font-bold ${(note.fontWeight ?? "normal") === "bold" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
+        className={`rounded-md px-3.5 py-1.5 font-bold ${(note.fontWeight ?? "normal") === "bold" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
         style={(note.fontWeight ?? "normal") === "bold" ? { backgroundColor: TOOLBAR_ACCENT } : undefined}
         title="Bold"
         aria-pressed={(note.fontWeight ?? "normal") === "bold"}
@@ -394,7 +394,7 @@ function StickyToolbar({
       <button
         type="button"
         onClick={() => onUpdate({ fontStyle: (note.fontStyle ?? "normal") === "italic" ? "normal" : "italic" })}
-        className={`rounded-md px-3 py-1.5 font-serif italic ${(note.fontStyle ?? "normal") === "italic" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
+        className={`rounded-md px-3.5 py-1.5 font-serif italic ${(note.fontStyle ?? "normal") === "italic" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
         style={(note.fontStyle ?? "normal") === "italic" ? { backgroundColor: TOOLBAR_ACCENT } : undefined}
         title="Italic"
         aria-pressed={(note.fontStyle ?? "normal") === "italic"}
@@ -406,7 +406,7 @@ function StickyToolbar({
       <button
         type="button"
         onClick={() => onUpdate({ listStyle: (note.listStyle ?? "none") === "bullet" ? "none" : "bullet" })}
-        className={`rounded-md px-3 py-1.5 ${(note.listStyle ?? "none") === "bullet" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
+        className={`rounded-md px-3 py-1.5 h-9 ${(note.listStyle ?? "none") === "bullet" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
         style={(note.listStyle ?? "none") === "bullet" ? { backgroundColor: TOOLBAR_ACCENT } : undefined}
         title="Bulleted list"
         aria-pressed={(note.listStyle ?? "none") === "bullet"}

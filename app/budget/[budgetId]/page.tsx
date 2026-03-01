@@ -9,7 +9,6 @@ import { useUserRooms } from "@/hooks/use-user-rooms";
 import { useRoom } from "@/hooks/use-room";
 import { useRoomMembers } from "@/hooks/use-room-members";
 import { useUserProfile } from "@/lib/use-user-profile";
-import { BudgetPageSkeleton } from "@/components/BudgetPageSkeleton";
 import { EditableRoomName } from "@/components/EditableRoomName";
 import { FridgeLayout } from "@/components/FridgeLayout";
 import type { Expense } from "@/lib/types";
@@ -95,7 +94,11 @@ export default function BudgetTrackerPage() {
   }
 
   if (roomLoading) {
-    return <BudgetPageSkeleton />;
+    return (
+      <FridgeLayout showJars>
+        <div className="flex min-h-full flex-1 flex-col" />
+      </FridgeLayout>
+    );
   }
 
   const jaggedClipPath = (
@@ -136,10 +139,9 @@ export default function BudgetTrackerPage() {
           <div className="mx-auto grid w-full max-w-7xl flex-1 gap-6 md:grid-cols-[1fr_1.2fr] md:gap-8">
             {/* Create an Expense form - paper-style with jagged top edge */}
             <section
-              className="expenses-create-form-jagged relative flex min-h-0 flex-col border-2 p-6 pt-8 pb-8 md:p-8 md:pt-10 md:pb-10"
+              className="expenses-create-form-jagged relative flex min-h-0 flex-col p-6 pt-8 pb-8 md:p-8 md:pt-10 md:pb-10"
               style={{
                 backgroundColor: "var(--expenses-purple)",
-                borderColor: "#5c4033",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
               }}
             >

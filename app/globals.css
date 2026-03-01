@@ -53,6 +53,10 @@ body {
   font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 }
 
+button {
+  min-height: 36px;
+}
+
 /* Board canvas: cream frame with fridge image centered */
 .bg-fridge-canvas {
   background-color: var(--fridge-cream);
@@ -104,20 +108,6 @@ textarea::placeholder {
 .room-code-input::placeholder {
   color: #ffffff;
   opacity: 0.9;
-}
-
-/* Softer skeleton pulse for loading states */
-@keyframes skeleton-pulse {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.animate-skeleton-pulse {
-  animation: skeleton-pulse 2s ease-in-out infinite;
 }
 
 @keyframes fade-in {
