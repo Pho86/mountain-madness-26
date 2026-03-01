@@ -60,7 +60,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:max-w-[200px] sm:mx-auto">
           {AVATAR_IDS.map((id) => (
             <button
               key={id}
