@@ -793,6 +793,8 @@ export function Sticky({
   const imageScale = note.imageUrl
     ? (isResizing ? resizeScale : (note.imageScale ?? 1))
     : 1;
+  const stickerSide = note.authorStickerSide ?? "left";
+  const nameSide = stickerSide === "left" ? "right" : "left";
 
   const handleTextareaKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -939,16 +941,16 @@ export function Sticky({
       )}
       <div
         ref={cardRef}
-        className={`relative flex min-h-[200px] flex-col rounded-lg border-2 transition-colors ${
+        className={`relative flex min-h-[200px] flex-col rounded-lg transition-colors ${
           isSelected ? "outline-2 outline-blue-500 outline-offset-0" : ""
-        }`}
+        } ${note.imageUrl ? "border-0 bg-transparent" : "border-2"}`}
         style={{
-          backgroundColor: note.color,
-          borderColor,
+          backgroundColor: note.imageUrl ? "transparent" : note.color,
+          borderColor: note.imageUrl ? "transparent" : borderColor,
           ...(note.imageUrl && { minHeight: IMAGE_BASE_H * imageScale }),
         }}
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-1 p-3 select-none">
+        <div className={`flex min-h-0 flex-1 flex-col gap-1 select-none ${note.imageUrl && !note.text ? "p-0" : "p-3"}`}>
           {note.imageUrl ? (
             <>
               <div
@@ -1060,23 +1062,35 @@ export function Sticky({
               )}
             </div>
           )}
-          {(note.authorIconId || note.authorName) && (
-            <div className="mt-auto flex items-center justify-start gap-1.5 text-xs text-zinc-600">
-              {note.authorIconId && (
-                <img
-                  src={getAvatarUrl(note.authorIconId)}
-                  alt=""
-                  className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-black/10"
-                />
-              )}
+          {(note.authorIconId || note.authorName) && !note.imageUrl && (
+            <>
               {note.authorName && (
-                <span className="truncate font-medium text-zinc-700" title={note.authorName}>
-                  {note.authorName}
-                </span>
+                <div
+                  className={`absolute bottom-4 max-w-[60%] text-xs text-zinc-700 ${
+                    nameSide === "left" ? "left-4" : "right-4"
+                  }`}
+                  title={note.authorName}
+                >
+                  <span className="block truncate font-medium">{note.authorName}</span>
+                </div>
               )}
-            </div>
+              {note.authorIconId && (
+                <div
+                  className={`absolute -bottom-4 z-10 ${
+                    stickerSide === "left" ? "-left-6" : "-right-6"
+                  }`}
+                  title={note.authorName}
+                >
+                  <img
+                    src={getAvatarUrl(note.authorIconId)}
+                    alt=""
+                    className="h-16 w-16"
+                  />
+                </div>
+              )}
+            </>
           )}
-          {!(note.authorIconId || note.authorName) && <div className="mt-auto" />}
+          {!(note.authorIconId || note.authorName) && !note.imageUrl && <div className="mt-auto" />}
         </div>
       </div>
       {note.imageUrl && isSelected && (
@@ -1084,8 +1098,8 @@ export function Sticky({
           className="pointer-events-none absolute inset-0 rounded-lg"
           aria-hidden
         >
-          <div className="absolute inset-0 rounded-lg border-2 border-blue-500" />
-          {(["nw", "ne", "sw", "se"] as const).map((corner) => (
+          <div className="absolute relative inset-0 rounded-lg border-2 border-blue-500" />
+          {(["sw", "se"] as const).map((corner) => (
             <div
               key={corner}
               data-resize-handle
@@ -1094,11 +1108,9 @@ export function Sticky({
               aria-valuemin={IMAGE_SCALE_MIN}
               aria-valuemax={IMAGE_SCALE_MAX}
               aria-valuenow={imageScale}
-              className={`absolute z-10 h-5 w-5 cursor-se-resize rounded-full border-2 border-blue-500 bg-white hover:bg-blue-50 hover:scale-110 pointer-events-auto ${
-                corner === "nw" ? "left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize" : ""
-              } ${corner === "ne" ? "right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize" : ""} ${
-                corner === "sw" ? "bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize" : ""
-              } ${corner === "se" ? "bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize" : ""}`}
+              className={`absolute bottom-0 z-10 h-5 w-5 rounded-full border-2 border-blue-500 bg-white hover:bg-blue-50 hover:scale-110 pointer-events-auto ${
+                corner === "sw" ? "bottom-10 cursor-sw-resize" : "bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize"
+              }`}
               onPointerDown={handleResizePointerDown}
               onPointerMove={handleResizePointerMove}
               onPointerUp={handleResizePointerUp}
@@ -1132,6 +1144,7 @@ export function Sticky({
 export function useAddSticky(authorName?: string, authorIconId?: string) {
   return useCallback(
     (x: number, y: number) => {
+      const authorStickerSide = Math.random() < 0.5 ? "left" : "right";
       const note: StickyNote = {
         id: crypto.randomUUID(),
         x,
@@ -1142,6 +1155,7 @@ export function useAddSticky(authorName?: string, authorIconId?: string) {
         createdAt: Date.now(),
         authorName: authorName ?? undefined,
         authorIconId: authorIconId ?? undefined,
+        authorStickerSide,
       };
       return note;
     },

@@ -19,6 +19,8 @@ export type StickyNote = {
   authorName?: string;
   /** Avatar icon ID (from user profile) when note was created */
   authorIconId?: string;
+  /** Side for the author avatar sticker; when omitted, defaults to left */
+  authorStickerSide?: "left" | "right";
 };
 
 export type BoardState = {

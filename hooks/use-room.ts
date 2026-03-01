@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { doc, getDoc, getDocFromServer, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const ROOMS = "rooms";
+const BOARDS = "boards";
 
 /** Returns true if a room document exists in Firestore. */
 export async function checkRoomExists(roomId: string): Promise<boolean> {
@@ -13,6 +14,11 @@ export async function checkRoomExists(roomId: string): Promise<boolean> {
   const ref = doc(db, ROOMS, id);
   const snapshot = await getDoc(ref);
   return snapshot.exists();
+}
+
+/** Room name is stored in boards/{boardId} so it uses the same Firestore path as notes. */
+function boardRef(boardId: string) {
+  return doc(db, BOARDS, boardId);
 }
 
 export function useRoom(roomId: string | null) {
@@ -25,25 +31,22 @@ export function useRoom(roomId: string | null) {
       setLoading(false);
       return;
     }
-    let cancelled = false;
     setLoading(true);
-    const ref = doc(db, ROOMS, roomId);
-    getDocFromServer(ref)
-      .then((snapshot) => {
-        if (cancelled) return;
+    const ref = boardRef(roomId);
+    const unsub = onSnapshot(
+      ref,
+      (snapshot) => {
         const data = snapshot.data();
         const savedName = data?.name;
         setNameState(typeof savedName === "string" && savedName.trim() ? savedName.trim() : roomId);
-      })
-      .catch(() => {
-        if (!cancelled) setNameState(roomId);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+        setLoading(false);
+      },
+      () => {
+        setNameState(roomId);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
   }, [roomId]);
 
   const ensureRoomExists = useCallback(() => {
@@ -56,10 +59,12 @@ export function useRoom(roomId: string | null) {
     (newName: string) => {
       if (!roomId) return;
       const trimmed = (newName.trim() || roomId).slice(0, 18);
-      const ref = doc(db, ROOMS, roomId);
+      const ref = boardRef(roomId);
       setDoc(ref, { name: trimmed }, { merge: true })
         .then(() => setNameState(trimmed))
-        .catch(() => {});
+        .catch((err) => {
+          console.error("[useRoom] Failed to save room name:", err);
+        });
     },
     [roomId]
   );

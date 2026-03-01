@@ -155,10 +155,10 @@ export default function Home() {
                     value={joinCode}
                     onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                     placeholder="Enter room code"
-                    className="room-code-input min-w-0 flex-1 rounded-xl border border-white/60 px-4 py-2.5 text-base focus:border-white/80 focus:outline-none focus:ring-0"
+                    className="room-code-input min-w-0 flex-1 rounded-xl border border-white/60 px-4 py-2.5 text-center text-base focus:border-white/80 focus:outline-none focus:ring-0 placeholder:text-white"
                     style={{
-                      backgroundColor: "rgba(255,255,255,0.2)",
-                      color: "#304359",
+                      backgroundColor: "transparent",
+                      color: "#FFFFFF",
                     }}
                   />
                   <button
@@ -201,7 +201,7 @@ export default function Home() {
                     <li key={id}>
                       <Link
                         href={`/board/${id}`}
-                        className="block rounded py-1.5 text-sm transition hover:opacity-90"
+                        className="block rounded-lg py-2 pl-3 pr-3 -ml-3 mr-3 text-sm transition-all duration-200 hover:bg-white/20"
                         style={{ color: "#F7EAD7" }}
                       >
                         {roomNames[id] && roomNames[id] !== id ? roomNames[id] : "Unnamed room"}

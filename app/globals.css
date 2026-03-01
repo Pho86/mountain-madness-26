@@ -9,6 +9,13 @@
   --fridge-cream: #FBE8D2;
   --fridge-outer: #FBE8D2;
   --canvas-max-width: 1280px;
+  /* Chores page: blue accent */
+  --chores-blue: #566793;
+  --chores-blue-dark: #5d689b;
+  /* Create Task form: image styling */
+  --chores-form-bg: #FAEAD6;
+  --chores-form-text: #3B4078;
+  --chores-form-border: #9A9DC9;
 }
 
 @theme inline {
@@ -18,6 +25,8 @@
   --color-fridge-outer: var(--fridge-outer);
   --color-text-on-red: var(--text-on-red);
   --color-text-on-red-muted: var(--text-on-red-muted);
+  --color-chores-blue: var(--chores-blue);
+  --color-chores-blue-dark: var(--chores-blue-dark);
   /* Body: Manrope. Headings: Advercase (use font-serif in Tailwind). */
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-advercase), ui-serif, Georgia, serif;
@@ -81,22 +90,14 @@ body {
   margin-inline: auto;
 }
 
-/* Inputs always readable: light background + dark text (avoids white-on-white in dark mode) */
-input,
-textarea,
-select {
-  background-color: #ffffff;
-  color: #171717;
-}
-
 input::placeholder,
 textarea::placeholder {
   color: #737373;
 }
 
 .room-code-input::placeholder {
-  color: #304359;
-  opacity: 0.85;
+  color: #ffffff;
+  opacity: 0.9;
 }
 
 /* Softer skeleton pulse for loading states */
@@ -185,4 +186,67 @@ textarea::placeholder {
 }
 .sign-in-google-btn {
   transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+/* Chores page: Advercase font for labels and headings */
+.chores-label {
+  font-family: var(--font-advercase), ui-serif, Georgia, serif;
+  color: var(--chores-form-text);
+}
+.chores-font {
+  font-family: var(--font-advercase), ui-serif, Georgia, serif;
+}
+
+/* Chores Create Task form: input and select styling (light lavender border, sans-serif) */
+.chores-form-field {
+  border-radius: 0.75rem;
+  border: 1px solid var(--chores-form-border);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  background-color: none;
+  color: var(--chores-form-text);
+  outline: none;
+  transition: box-shadow 0.15s ease;
+  width: auto;
+}
+.chores-form-field::placeholder {
+  color: var(--chores-form-text);
+  opacity: 0.7;
+}
+.chores-form-field:focus {
+  box-shadow: 0 0 0 2px rgba(154, 157, 201, 0.4);
+}
+.chores-form-field option {
+  background-color: #fffefc;
+  color: var(--chores-form-text);
+}
+
+.chores-submit-btn:hover {
+  background-color: var(--chores-form-text);
+}
+
+/* Chore card: green then slide out when marking complete */
+@keyframes chore-complete-slide {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+.chore-completing {
+  animation: chore-complete-slide 0.5s ease-in forwards;
+}
+
+/* Create a Task: jagged/torn paper top and bottom edges - SVG clipPath for reliability */
+.chores-create-task-jagged {
+  clip-path: url(#chores-jagged-clip);
+  -webkit-clip-path: url(#chores-jagged-clip);
 }

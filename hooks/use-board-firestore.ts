@@ -41,6 +41,7 @@ function toDoc(note: StickyNote) {
     createdAt: note.createdAt,
     ...(note.authorName != null && { authorName: note.authorName }),
     ...(note.authorIconId != null && { authorIconId: note.authorIconId }),
+    ...(note.authorStickerSide != null && { authorStickerSide: note.authorStickerSide }),
   };
 }
 
@@ -68,6 +69,7 @@ function fromDoc(data: {
   listStyle?: "none" | "bullet";
   authorName?: string;
   authorIconId?: string;
+  authorStickerSide?: "left" | "right";
 }): StickyNote {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
   const createdAt =
@@ -92,6 +94,7 @@ function fromDoc(data: {
     createdAt,
     authorName: data.authorName,
     authorIconId: data.authorIconId,
+    authorStickerSide: data.authorStickerSide === "right" ? "right" : "left",
   };
 }
 

@@ -571,6 +571,33 @@ export default function BoardPage() {
     imageInputRef.current?.click();
   }, []);
 
+  const handleAddSticker = useCallback(
+    (url: string) => {
+      if (!mainRef.current) return;
+      const rect = mainRef.current.getBoundingClientRect();
+      const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
+      const contentCenterX = (rect.width / 2 - currentPan.x) / currentZoom;
+      const contentCenterY = (rect.height / 2 - currentPan.y) / currentZoom;
+      const noteId = crypto.randomUUID();
+      const x = roundPosition(contentCenterX - 112);
+      const y = roundPosition(contentCenterY - 100);
+      const note: StickyNote = {
+        id: noteId,
+        x,
+        y,
+        text: "",
+        color: "#f5f5f5",
+        imageUrl: url,
+        createdAt: Date.now(),
+      };
+      addNote(note);
+      setSelectedNoteIds(new Set([noteId]));
+      setPrimarySelectedId(noteId);
+      setFrontNoteIds((prev) => [...prev.filter((id) => id !== noteId), noteId]);
+    },
+    [addNote]
+  );
+
   const handleImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -741,7 +768,8 @@ export default function BoardPage() {
                 roomCode={boardId}
                 onSave={setRoomName}
                 hideCode={false}
-                loading={false}
+                loading={roomLoading}
+                disabled={!user}
                 className="flex flex-col items-end gap-0.5 font-serif text-right"
                 inputClassName="w-full min-w-0 border-0 border-b-2 border-zinc-600 bg-transparent py-0.5 text-right text-lg font-medium text-zinc-900 outline-none focus:ring-0 [background:transparent]"
                 compact
@@ -888,6 +916,7 @@ export default function BoardPage() {
             <BoardToolbar
               tool={tool}
               onToolChange={setTool}
+              onAddStickerClick={handleAddSticker}
               onAddImageClick={handleAddImageClick}
               className="border-0 bg-transparent p-0"
             />

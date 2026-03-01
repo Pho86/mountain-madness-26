@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-const ROOMS = "rooms";
+const BOARDS = "boards";
 
 export function useRoomNames(roomIds: string[]) {
   const [names, setNames] = useState<Record<string, string>>({});
@@ -15,7 +15,7 @@ export function useRoomNames(roomIds: string[]) {
       return;
     }
     const unsubs = roomIds.map((id) => {
-      const ref = doc(db, ROOMS, id);
+      const ref = doc(db, BOARDS, id);
       return onSnapshot(
         ref,
         (snapshot) => {
