@@ -954,9 +954,8 @@ export function Sticky({
           {note.imageUrl ? (
             <>
               <div
-                className="relative flex-1 overflow-hidden rounded"
+                className="relative flex-1 overflow-hidden rounded min-h-[120px]"
                 style={{
-                  minHeight: Math.max(128, IMAGE_BASE_H * imageScale - (note.text ? 48 : 24)),
                   width: "100%",
                 }}
               >
@@ -1062,35 +1061,17 @@ export function Sticky({
               )}
             </div>
           )}
-          {(note.authorIconId || note.authorName) && !note.imageUrl && (
-            <>
-              {note.authorName && (
-                <div
-                  className={`absolute bottom-4 max-w-[60%] text-xs text-zinc-700 ${
-                    nameSide === "left" ? "left-4" : "right-4"
-                  }`}
-                  title={note.authorName}
-                >
-                  <span className="block truncate font-medium">{note.authorName}</span>
-                </div>
-              )}
-              {note.authorIconId && (
-                <div
-                  className={`absolute -bottom-4 z-10 ${
-                    stickerSide === "left" ? "-left-6" : "-right-6"
-                  }`}
-                  title={note.authorName}
-                >
-                  <img
-                    src={getAvatarUrl(note.authorIconId)}
-                    alt=""
-                    className="h-16 w-16"
-                  />
-                </div>
-              )}
-            </>
+          {note.authorName && (
+            <div
+              className={`absolute bottom-4 max-w-[60%] text-xs text-zinc-700 ${
+                nameSide === "left" ? "left-4" : "right-4"
+              }`}
+              title={note.authorName}
+            >
+              <span className="block truncate font-medium">{note.authorName}</span>
+            </div>
           )}
-          {!(note.authorIconId || note.authorName) && !note.imageUrl && <div className="mt-auto" />}
+          {!note.authorName && !note.imageUrl && <div className="mt-auto" />}
         </div>
       </div>
       {note.imageUrl && isSelected && (
@@ -1108,8 +1089,10 @@ export function Sticky({
               aria-valuemin={IMAGE_SCALE_MIN}
               aria-valuemax={IMAGE_SCALE_MAX}
               aria-valuenow={imageScale}
-              className={`absolute bottom-0 z-10 h-5 w-5 rounded-full border-2 border-blue-500 bg-white hover:bg-blue-50 hover:scale-110 pointer-events-auto ${
-                corner === "sw" ? "bottom-10 cursor-sw-resize" : "bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize"
+              className={`absolute z-10 h-5 w-5 rounded-full border-2 border-blue-500 bg-white hover:bg-blue-50 hover:scale-110 pointer-events-auto ${
+                corner === "sw"
+                  ? "left-0 bottom-0 translate-x-1/2 translate-y-1/2 cursor-sw-resize"
+                  : "right-0 bottom-0 -translate-x-1/2 translate-y-1/2 cursor-se-resize"
               }`}
               onPointerDown={handleResizePointerDown}
               onPointerMove={handleResizePointerMove}

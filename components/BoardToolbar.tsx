@@ -118,7 +118,7 @@ export function BoardToolbar({
             createPortal(
               <div
                 data-stickers-popover
-                className="fixed z-[9999] flex flex-col gap-1 p-1"
+                className="fixed z-[9999] flex flex-col gap-1 p-1 bg-zinc-100 rounded-lg border border-zinc-300"
                 style={{
                   top: popoverRect.top,
                   left: popoverRect.left,

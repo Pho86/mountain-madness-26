@@ -84,7 +84,7 @@ export default function ProfilePage() {
               <img
                 src={getAvatarUrl(selectedId)}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full"
               />
             </div>
 

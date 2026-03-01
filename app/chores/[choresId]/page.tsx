@@ -72,6 +72,7 @@ export default function ChoresPage() {
   const [frequencyDays, setFrequencyDays] = useState(7);
   const [tasksView, setTasksView] = useState<"inProgress" | "completed">("inProgress");
   const [completingChoreIds, setCompletingChoreIds] = useState<Set<string>>(new Set());
+  const [capyWiggling, setCapyWiggling] = useState(false);
 
   useEffect(() => {
     if (user && choresId) ensureCurrentUser(user, currentUserIconId);
@@ -244,8 +245,13 @@ export default function ChoresPage() {
                     <img
                       src="/CapyBread.png"
                       alt=""
-                      className="h-18 w-18 object-contain"
+                      className={`h-18 w-18 object-contain cursor-pointer select-none ${capyWiggling ? "capy-wiggle" : ""}`}
                       aria-hidden
+                      onClick={() => {
+                        setCapyWiggling(false);
+                        requestAnimationFrame(() => setCapyWiggling(true));
+                      }}
+                      onAnimationEnd={() => setCapyWiggling(false)}
                     />
                   </div>
                   <div className="flex flex-col h-full w-full ">
