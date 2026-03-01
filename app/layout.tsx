@@ -32,6 +32,9 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "Reizoko",
   description: "Sticky notes, chore charts, and cost splitting in real-time",
+  icons: {
+    icon: "/raizoko.svg",
+  },
 };
 
 export default function RootLayout({

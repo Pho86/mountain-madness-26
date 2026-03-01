@@ -103,9 +103,6 @@ export default function Home() {
                 <h2 className="mb-5 mt-5 text-center font-serif text-3xl font-medium text-[#F7EAD7]">
                   Sign In
                 </h2>
-                <p className="mb-5 text-center text-sm text-[#F7EAD7]">
-                  Sign in to join or create a room.
-                </p>
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
