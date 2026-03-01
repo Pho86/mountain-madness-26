@@ -44,12 +44,14 @@ export function BoardCalendar({
   connected,
   addEvent,
   deleteEvent,
+  deleteOccurrence,
 }: {
   calendarId: string;
   events: CalendarEvent[];
   connected: boolean;
   addEvent: (e: CalendarEvent) => void;
   deleteEvent: (id: string) => void;
+  deleteOccurrence: (eventId: string, date: string) => void;
 }) {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [current, setCurrent] = useState(() => new Date());
@@ -101,7 +103,9 @@ export function BoardCalendar({
   }, [current, viewMode]);
 
   const goToday = useCallback(() => {
-    setCurrent(new Date());
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    setCurrent(d);
   }, []);
 
   function rangeForList() {
@@ -131,6 +135,8 @@ export function BoardCalendar({
     list.push(o);
     occurrencesByDate.set(o.date, list);
   }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg border border-zinc-200 overflow-hidden">
@@ -293,14 +299,24 @@ export function BoardCalendar({
             {monthGrid.flat().map((cell, i) => (
               <div
                 key={i}
-                className={`min-h-[80px] bg-white p-1 ${!cell ? "bg-zinc-50/50" : ""}`}
+                className={`min-h-[80px] bg-white p-1 ${!cell ? "bg-zinc-50/50" : ""} ${cell === todayStr ? "relative" : ""}`}
               >
                 {cell && (
                   <>
-                    <span className="text-sm text-zinc-600">
-                      {new Date(cell + "T12:00:00").getDate()}
-                    </span>
-                    <ul className="mt-1 space-y-0.5">
+                    {cell === todayStr && (
+                      <span className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+                        {new Date(cell + "T12:00:00").getDate()}
+                      </span>
+                    )}
+                    {cell !== todayStr && (
+                      <span className="text-sm text-zinc-600">
+                        {new Date(cell + "T12:00:00").getDate()}
+                      </span>
+                    )}
+                    {cell === todayStr && (
+                      <span className="invisible text-sm">0</span>
+                    )}
+                    <ul className={`mt-1 space-y-0.5 ${cell === todayStr ? "mt-8" : ""}`}>
                       {(occurrencesByDate.get(cell) ?? [])
                         .slice(0, 3)
                         .map((o, j) => (
@@ -352,9 +368,13 @@ export function BoardCalendar({
                         </span>
                         <button
                           type="button"
-                          onClick={() => deleteEvent(o.eventId)}
+                          onClick={() =>
+                            o.isRecurring
+                              ? deleteOccurrence(o.eventId, o.date)
+                              : deleteEvent(o.eventId)
+                          }
                           className="text-blue-600 hover:text-red-600"
-                          aria-label="Delete"
+                          aria-label={o.isRecurring ? "Remove this occurrence" : "Delete"}
                         >
                           ×
                         </button>
@@ -389,9 +409,13 @@ export function BoardCalendar({
                   </div>
                   <button
                     type="button"
-                    onClick={() => deleteEvent(o.eventId)}
+                    onClick={() =>
+                      o.isRecurring
+                        ? deleteOccurrence(o.eventId, o.date)
+                        : deleteEvent(o.eventId)
+                    }
                     className="rounded p-1 text-zinc-400 hover:bg-zinc-200 hover:text-red-600"
-                    aria-label="Delete event"
+                    aria-label={o.isRecurring ? "Remove this occurrence" : "Delete event"}
                   >
                     <svg
                       className="h-4 w-4"

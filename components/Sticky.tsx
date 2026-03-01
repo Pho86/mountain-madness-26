@@ -267,25 +267,29 @@ export function Sticky({
   onSelect,
   isDragging,
   isSelected,
+  showToolbar,
   autoFocusEdit = false,
   onEditEnd,
   displayX,
   displayY,
   onSaveNote,
+  onToolbarPatch,
   zIndex = 1,
 }: {
   note: StickyNote;
   onUpdate: (n: StickyNote) => void;
   onDragEnd?: (noteId: string, clientX: number, clientY: number) => void;
   onDragMove?: (clientX: number, clientY: number) => void;
-  onSelect?: (noteId: string) => void;
+  onSelect?: (noteId: string, shiftKey?: boolean) => void;
   isDragging?: boolean;
   isSelected?: boolean;
+  showToolbar?: boolean;
   autoFocusEdit?: boolean;
   onEditEnd?: () => void;
   displayX?: number;
   displayY?: number;
   onSaveNote?: (note: StickyNote) => void;
+  onToolbarPatch?: (patch: Partial<StickyNote>) => void;
   zIndex?: number;
 }) {
   const x = displayX ?? note.x;
@@ -309,6 +313,26 @@ export function Sticky({
   useEffect(() => {
     if (!editing) setLocalText(note.text);
   }, [note.text, editing]);
+
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const REALTIME_SAVE_DEBOUNCE_MS = 200;
+  useEffect(() => {
+    if (!editing || !onSaveNote) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = null;
+      const raw = (note.listStyle ?? "none") === "bullet"
+        ? localText.split("\n").map((l) => l.replace(/^•\s?/, "")).join("\n")
+        : localText.trim();
+      const newText = raw || "";
+      if (newText !== note.text) {
+        onSaveNote({ ...note, text: newText });
+      }
+    }, REALTIME_SAVE_DEBOUNCE_MS);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [editing, localText, note, onSaveNote]);
 
   useEffect(() => {
     if (editing && (note.listStyle ?? "none") === "bullet") {
@@ -381,7 +405,7 @@ export function Sticky({
       if (wasDragging && onDragEnd) {
         onDragEnd(noteId, e.clientX, e.clientY);
       } else if (hadPointerDown && !wasDragging && onSelect) {
-        onSelect(noteId);
+        onSelect(noteId, e.shiftKey);
       }
       dragRef.current = null;
     },
@@ -403,10 +427,14 @@ export function Sticky({
 
   const handleToolbarUpdate = useCallback(
     (patch: Partial<StickyNote>) => {
-      const updated = { ...note, ...patch };
-      onSaveNote?.(updated);
+      if (onToolbarPatch) {
+        onToolbarPatch(patch);
+      } else {
+        const updated = { ...note, ...patch };
+        onSaveNote?.(updated);
+      }
     },
-    [note, onSaveNote]
+    [note, onSaveNote, onToolbarPatch]
   );
 
   const borderColor = getBorderColor(note.color);
@@ -450,7 +478,7 @@ export function Sticky({
       onPointerCancel={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      {isSelected && (
+      {showToolbar && (
         <StickyToolbar
           note={note}
           onUpdate={handleToolbarUpdate}
@@ -471,7 +499,7 @@ export function Sticky({
           {editing ? (
             <textarea
               ref={textareaRef}
-              className="-mx-3 min-h-24 w-[calc(100%+1.5rem)] resize-none wrap-break-word border-0 px-3 py-2 font-normal text-zinc-900 placeholder:text-zinc-600/70 outline-none select-text"
+              className="min-h-24 w-full resize-none wrap-break-word border-0 bg-transparent font-normal text-zinc-900 placeholder:text-zinc-600/70 outline-none select-text"
               style={{
                 backgroundColor: "transparent",
                 fontSize: fontSizePx,
@@ -491,7 +519,7 @@ export function Sticky({
             />
           ) : (
             <p
-              className="min-h-20 flex-1 cursor-grab select-none wrap-break-word rounded p-2 font-normal leading-normal text-zinc-800 whitespace-pre-wrap"
+              className="min-h-20 flex-1 cursor-grab select-none wrap-break-word rounded font-normal leading-normal text-zinc-800 whitespace-pre-wrap"
               style={{
                 fontSize: fontSizePx,
                 fontWeight: isBold ? "bold" : "normal",

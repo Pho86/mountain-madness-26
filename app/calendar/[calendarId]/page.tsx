@@ -17,7 +17,7 @@ export default function CalendarPage() {
   const { user } = useAuth();
   const { addRoom } = useUserRooms(user?.uid ?? null);
   const { name: roomName, ensureRoomExists, loading: roomLoading } = useRoom(calendarId);
-  const { events, connected, addEvent, deleteEvent } =
+  const { events, connected, addEvent, deleteEvent, deleteOccurrence } =
     useCalendarFirestore(calendarId);
 
   useEffect(() => {
@@ -63,6 +63,7 @@ export default function CalendarPage() {
           connected={connected}
           addEvent={addEvent}
           deleteEvent={deleteEvent}
+          deleteOccurrence={deleteOccurrence}
         />
       </main>
     </div>

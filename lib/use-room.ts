@@ -1,10 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const ROOMS = "rooms";
+
+/** Returns true if a room document exists in Firestore. */
+export async function checkRoomExists(roomId: string): Promise<boolean> {
+  const id = roomId?.trim();
+  if (!id) return false;
+  const ref = doc(db, ROOMS, id);
+  const snapshot = await getDoc(ref);
+  return snapshot.exists();
+}
 
 export function useRoom(roomId: string | null) {
   const [name, setNameState] = useState<string>("");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
 import { useBoardFirestore } from "@/lib/use-board-firestore";
 import { useAuth } from "@/lib/auth-context";
@@ -14,7 +15,7 @@ import { BoardPageSkeleton } from "@/components/BoardPageSkeleton";
 import { useRoom } from "@/lib/use-room";
 import type { StickyNote } from "@/lib/types";
 
-type Tool = "cursor" | "sticky";
+type Tool = "cursor" | "move" | "sticky";
 
 const DELETE_ZONE_SELECTOR = "[data-delete-zone]";
 
@@ -38,7 +39,8 @@ export default function BoardPage() {
   const createSticky = useAddSticky(authorName);
   const [tool, setTool] = useState<Tool>("cursor");
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
+  const [primarySelectedId, setPrimarySelectedId] = useState<string | null>(null);
   const [lastCreatedNoteId, setLastCreatedNoteId] = useState<string | null>(null);
   const [dragOverDeleteZone, setDragOverDeleteZone] = useState(false);
   const [frontNoteIds, setFrontNoteIds] = useState<string[]>([]);
@@ -50,13 +52,26 @@ export default function BoardPage() {
   const panStartRef = useRef<{ clientX: number; clientY: number; panX: number; panY: number } | null>(null);
   const didPanRef = useRef(false);
   const didJustFinishNewNoteDragRef = useRef(false);
+  const didMarqueeRef = useRef(false);
   const deleteZoneRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const lastNewNotePositionRef = useRef<{ x: number; y: number } | null>(null);
+  const draggingSelectionRef = useRef<Set<string> | null>(null);
+  const initialDragPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const lastDragSyncTimeRef = useRef(0);
+  const optimisticPositionRef = useRef(optimisticPosition);
+  useEffect(() => {
+    optimisticPositionRef.current = optimisticPosition;
+  }, [optimisticPosition]);
 
   type PendingNewNoteDrag = { noteId: string; noteX: number; noteY: number };
   const [pendingNewNoteDrag, setPendingNewNoteDrag] = useState<PendingNewNoteDrag | null>(null);
   const [pendingNotes, setPendingNotes] = useState<StickyNote[]>([]);
+
+  type SelectionBox = { startX: number; startY: number; endX: number; endY: number };
+  const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
+  const selectionBoxShiftRef = useRef(false);
+  const selectionBoxRef = useRef<SelectionBox | null>(null);
 
   const noteIds = new Set(notes.map((n) => n.id));
   const displayNotes = [...notes, ...pendingNotes.filter((p) => !noteIds.has(p.id))];
@@ -71,6 +86,10 @@ export default function BoardPage() {
         didJustFinishNewNoteDragRef.current = false;
         return;
       }
+      if (didMarqueeRef.current) {
+        didMarqueeRef.current = false;
+        return;
+      }
       if ((e.target as HTMLElement).closest("[data-sticky]")) return;
       if (tool === "sticky") {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -80,9 +99,11 @@ export default function BoardPage() {
         const y = contentY - 40;
         const note = createSticky(x, y);
         addNote(note);
-        setSelectedNoteId(note.id);
+        setSelectedNoteIds(new Set([note.id]));
+        setPrimarySelectedId(note.id);
       } else {
-        setSelectedNoteId(null);
+        setSelectedNoteIds(new Set());
+        setPrimarySelectedId(null);
       }
     },
     [tool, addNote, createSticky, pan.x, pan.y, zoom]
@@ -100,14 +121,24 @@ export default function BoardPage() {
         const note = createSticky(x, y);
         addNote(note);
         setPendingNotes((prev) => [...prev, note]);
-        setSelectedNoteId(note.id);
+        setSelectedNoteIds(new Set([note.id]));
+        setPrimarySelectedId(note.id);
         setFrontNoteIds((prev) => [...prev.filter((id) => id !== note.id), note.id]);
         setPendingNewNoteDrag({ noteId: note.id, noteX: x, noteY: y });
         setOptimisticPosition((prev) => ({ ...prev, [note.id]: { x, y } }));
         lastNewNotePositionRef.current = { x, y };
         return;
       }
-      if (tool !== "cursor") return;
+      if (tool !== "cursor" && tool !== "move") return;
+      if (tool === "cursor") {
+        selectionBoxShiftRef.current = e.shiftKey;
+        const box = { startX: e.clientX, startY: e.clientY, endX: e.clientX, endY: e.clientY };
+        selectionBoxRef.current = box;
+        setSelectionBox(box);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        return;
+      }
+      if (tool !== "move") return;
       setIsPanning(true);
       panStartRef.current = {
         clientX: e.clientX,
@@ -123,6 +154,14 @@ export default function BoardPage() {
     (e: React.PointerEvent<HTMLDivElement>) => {
       const main = mainRef.current;
       const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
+      if (selectionBox !== null) {
+        setSelectionBox((prev) => {
+          const next = prev ? { ...prev, endX: e.clientX, endY: e.clientY } : null;
+          if (next) selectionBoxRef.current = next;
+          return next;
+        });
+        return;
+      }
       if (pendingNewNoteDrag && main) {
         const rect = main.getBoundingClientRect();
         const contentX = (e.clientX - rect.left - currentPan.x) / currentZoom;
@@ -144,11 +183,61 @@ export default function BoardPage() {
         y: start.panY + (e.clientY - start.clientY),
       });
     },
-    [pendingNewNoteDrag]
+    [pendingNewNoteDrag, selectionBox]
   );
 
-  const handlePointerUp = useCallback(() => {
-    if (pendingNewNoteDrag) {
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const box = selectionBoxRef.current;
+      if (box !== null) {
+        selectionBoxRef.current = null;
+        setSelectionBox(null);
+        const w = Math.abs(box.endX - box.startX);
+        const h = Math.abs(box.endY - box.startY);
+        if (w > 5 || h > 5) {
+          didMarqueeRef.current = true;
+          const main = mainRef.current;
+          if (main) {
+            const rect = main.getBoundingClientRect();
+            const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
+            const toContent = (cx: number, cy: number) => ({
+              x: (cx - rect.left - currentPan.x) / currentZoom,
+              y: (cy - rect.top - currentPan.y) / currentZoom,
+            });
+            const left = Math.min(box.startX, box.endX);
+            const right = Math.max(box.startX, box.endX);
+            const top = Math.min(box.startY, box.endY);
+            const bottom = Math.max(box.startY, box.endY);
+            const boxContentLeft = toContent(left, top).x;
+            const boxContentTop = toContent(left, top).y;
+            const boxContentRight = toContent(right, bottom).x;
+            const boxContentBottom = toContent(right, bottom).y;
+            const STICKY_W = 224;
+            const STICKY_H = 200;
+            const idsInBox = displayNotes.filter((note) => {
+              const nx = optimisticPositionRef.current[note.id]?.x ?? note.x;
+              const ny = optimisticPositionRef.current[note.id]?.y ?? note.y;
+              const noteRight = nx + STICKY_W;
+              const noteBottom = ny + STICKY_H;
+              return !(boxContentRight < nx || boxContentLeft > noteRight || boxContentBottom < ny || boxContentTop > noteBottom);
+            }).map((n) => n.id);
+            if (idsInBox.length > 0) {
+              if (selectionBoxShiftRef.current) {
+                setSelectedNoteIds((prev) => {
+                  const next = new Set(prev);
+                  idsInBox.forEach((id) => next.add(id));
+                  return next;
+                });
+              } else {
+                setSelectedNoteIds(new Set(idsInBox));
+              }
+              setPrimarySelectedId(idsInBox[0]);
+            }
+          }
+        }
+        return;
+      }
+      if (pendingNewNoteDrag) {
       const note = notes.find((n) => n.id === pendingNewNoteDrag.noteId)
         ?? pendingNotes.find((n) => n.id === pendingNewNoteDrag.noteId);
       const finalPos = lastNewNotePositionRef.current ?? { x: pendingNewNoteDrag.noteX, y: pendingNewNoteDrag.noteY };
@@ -162,7 +251,7 @@ export default function BoardPage() {
     }
     panStartRef.current = null;
     setIsPanning(false);
-  }, [pendingNewNoteDrag, notes, pendingNotes, updateNote]);
+  }, [pendingNewNoteDrag, notes, pendingNotes, updateNote, displayNotes]);
 
   const handleEditEnd = useCallback(() => {
     setLastCreatedNoteId(null);
@@ -181,22 +270,36 @@ export default function BoardPage() {
         droppedOnDelete = !!el?.closest(DELETE_ZONE_SELECTOR);
       }
       setDragOverDeleteZone(false);
+
+      const toMove = draggingSelectionRef.current ?? new Set([noteId]);
+
       if (droppedOnDelete) {
         setOptimisticPosition((prev) => {
           const next = { ...prev };
-          delete next[noteId];
+          toMove.forEach((id) => delete next[id]);
           return next;
         });
-        deleteNote(noteId);
-        setSelectedNoteId((id) => (id === noteId ? null : id));
+        toMove.forEach((id) => deleteNote(id));
+        setSelectedNoteIds((prev) => {
+          const next = new Set(prev);
+          toMove.forEach((id) => next.delete(id));
+          return next;
+        });
+        setPrimarySelectedId((prev) => (prev && toMove.has(prev) ? null : prev));
       } else {
-        const finalPos = optimisticPosition[noteId];
-        const note = notes.find((n) => n.id === noteId);
-        if (note && finalPos) {
-          updateNote({ ...note, x: roundPosition(finalPos.x), y: roundPosition(finalPos.y) });
-        }
-        // Keep optimistic position so note stays at drop location until Firestore syncs
+        const positions = optimisticPositionRef.current;
+        toMove.forEach((id) => {
+          const finalPos = positions[id] ?? optimisticPosition[id];
+          const note = notes.find((n) => n.id === id);
+          if (note && finalPos) {
+            updateNote({ ...note, x: roundPosition(finalPos.x), y: roundPosition(finalPos.y) });
+          }
+        });
+        setSelectedNoteIds(new Set(toMove));
+        setPrimarySelectedId(noteId);
       }
+      draggingSelectionRef.current = null;
+      initialDragPositionsRef.current = {};
       setDraggingId(null);
     },
     [deleteNote, notes, optimisticPosition, updateNote]
@@ -204,12 +307,14 @@ export default function BoardPage() {
 
   // Clear optimistic position once Firestore has the same position (avoids glitch after drop)
   // Use 1px epsilon to avoid warp from float rounding when editing a note
+  // Don't clear while a note is being dragged, so the sticky doesn't lag behind the cursor
   const POSITION_EPS = 1;
   useEffect(() => {
     setOptimisticPosition((prev) => {
       const next = { ...prev };
       let changed = false;
       for (const id of Object.keys(next)) {
+        if (draggingSelectionRef.current?.has(id)) continue;
         const note = notes.find((n) => n.id === id);
         if (
           note &&
@@ -241,27 +346,103 @@ export default function BoardPage() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Delete" && e.key !== "Backspace") return;
       if ((e.target as HTMLElement).closest("textarea, input")) return;
-      if (!selectedNoteId) return;
+      if (selectedNoteIds.size === 0) return;
       e.preventDefault();
-      deleteNote(selectedNoteId);
-      setSelectedNoteId(null);
+      selectedNoteIds.forEach((id) => deleteNote(id));
+      setSelectedNoteIds(new Set());
+      setPrimarySelectedId(null);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedNoteId, deleteNote]);
+  }, [selectedNoteIds, deleteNote]);
+
+  useEffect(() => {
+    if (primarySelectedId && !selectedNoteIds.has(primarySelectedId)) {
+      setPrimarySelectedId(selectedNoteIds.size > 0 ? (selectedNoteIds.values().next().value ?? null) : null);
+    }
+  }, [selectedNoteIds, primarySelectedId]);
 
   const handleUpdate = useCallback((note: StickyNote) => {
-    setDraggingId(note.id);
-    setFrontNoteIds((prev) => [...prev.filter((id) => id !== note.id), note.id]);
-    setOptimisticPosition((prev) => ({
-      ...prev,
-      [note.id]: { x: roundPosition(note.x), y: roundPosition(note.y) },
-    }));
-  }, []);
+    const id = note.id;
+    setDraggingId(id);
+    setFrontNoteIds((prev) => [...prev.filter((i) => i !== id), id]);
 
-  const handleSelect = useCallback((noteId: string) => {
+    const selection = selectedNoteIds.has(id) ? selectedNoteIds : new Set([id]);
+    if (!draggingSelectionRef.current) {
+      if (!selectedNoteIds.has(id)) {
+        setSelectedNoteIds(new Set());
+        setPrimarySelectedId(null);
+      }
+      draggingSelectionRef.current = new Set(selection);
+      const opt = optimisticPositionRef.current;
+      const getPos = (nid: string) => {
+        const o = opt[nid];
+        if (o) return o;
+        const n = notes.find((n) => n.id === nid) ?? pendingNotes.find((p) => p.id === nid);
+        return n ? { x: n.x, y: n.y } : { x: 0, y: 0 };
+      };
+      initialDragPositionsRef.current = {};
+      selection.forEach((nid) => {
+        initialDragPositionsRef.current[nid] = getPos(nid);
+      });
+    }
+
+    const start = initialDragPositionsRef.current[id];
+    if (!start) return;
+    const deltaX = roundPosition(note.x - start.x);
+    const deltaY = roundPosition(note.y - start.y);
+
+    const next: Record<string, { x: number; y: number }> = { ...optimisticPositionRef.current };
+    draggingSelectionRef.current?.forEach((nid) => {
+      const initial = initialDragPositionsRef.current[nid];
+      if (!initial) return;
+      if (nid === id) {
+        next[nid] = { x: roundPosition(note.x), y: roundPosition(note.y) };
+      } else {
+        next[nid] = {
+          x: roundPosition(initial.x + deltaX),
+          y: roundPosition(initial.y + deltaY),
+        };
+      }
+    });
+    optimisticPositionRef.current = next;
+    flushSync(() => setOptimisticPosition(next));
+
+    const DRAG_SYNC_INTERVAL_MS = 80;
+    const now = Date.now();
+    if (now - lastDragSyncTimeRef.current >= DRAG_SYNC_INTERVAL_MS) {
+      lastDragSyncTimeRef.current = now;
+      draggingSelectionRef.current?.forEach((nid) => {
+        const pos = next[nid];
+        const n = notes.find((n) => n.id === nid) ?? pendingNotes.find((p) => p.id === nid);
+        if (n && pos) updateNote({ ...n, x: pos.x, y: pos.y });
+      });
+    }
+  }, [selectedNoteIds, notes, pendingNotes, updateNote]);
+
+  const handleToolbarPatch = useCallback(
+    (patch: Partial<StickyNote>) => {
+      selectedNoteIds.forEach((id) => {
+        const note = notes.find((n) => n.id === id) ?? pendingNotes.find((p) => p.id === id);
+        if (note) updateNote({ ...note, ...patch });
+      });
+    },
+    [selectedNoteIds, notes, pendingNotes, updateNote]
+  );
+
+  const handleSelect = useCallback((noteId: string, shiftKey?: boolean) => {
     setFrontNoteIds((prev) => [...prev.filter((id) => id !== noteId), noteId]);
-    setSelectedNoteId(noteId);
+    setPrimarySelectedId(noteId);
+    if (shiftKey) {
+      setSelectedNoteIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(noteId)) next.delete(noteId);
+        else next.add(noteId);
+        return next;
+      });
+    } else {
+      setSelectedNoteIds(new Set([noteId]));
+    }
   }, []);
 
   useEffect(() => {
@@ -369,14 +550,12 @@ export default function BoardPage() {
         roomCode={boardId}
       />
 
-      <BoardToolbar tool={tool} onToolChange={setTool} />
-
       <main
         ref={mainRef}
         className="relative flex-1 overflow-hidden"
         style={{
-          minHeight: "calc(100vh - 56px - 44px)",
-          cursor: roomLoading ? "default" : isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : "grab",
+          minHeight: "calc(100vh - 56px)",
+          cursor: roomLoading ? "default" : isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : tool === "move" ? "grab" : "default",
         }}
         onClick={roomLoading ? undefined : handleBoardClick}
         onPointerDown={roomLoading ? undefined : handlePointerDown}
@@ -412,7 +591,7 @@ export default function BoardPage() {
           className="absolute inset-0 min-h-full min-w-full origin-top-left"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            cursor: isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : "grab",
+            cursor: isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : tool === "move" ? "grab" : "default",
           }}
         >
           <div className="absolute inset-0" />
@@ -430,10 +609,12 @@ export default function BoardPage() {
                   onDragMove={handleDragMove}
                   onSelect={handleSelect}
                   isDragging={draggingId === note.id}
-                  isSelected={selectedNoteId === note.id}
+                  isSelected={selectedNoteIds.has(note.id)}
+                  showToolbar={selectedNoteIds.has(note.id) && (selectedNoteIds.size <= 1 || note.id === primarySelectedId)}
                   autoFocusEdit={lastCreatedNoteId === note.id}
                   onEditEnd={handleEditEnd}
                   onSaveNote={updateNote}
+                  onToolbarPatch={selectedNoteIds.size > 0 ? handleToolbarPatch : undefined}
                   displayX={opt?.x}
                   displayY={opt?.y}
                   zIndex={noteZIndex}
@@ -445,18 +626,46 @@ export default function BoardPage() {
         )}
       </main>
 
-      <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-6">
+      {selectionBox && (
         <div
-          ref={deleteZoneRef}
-          data-delete-zone
-          className={`pointer-events-auto flex cursor-default items-center gap-2 rounded-full border px-5 py-3 transition ${
-            dragOverDeleteZone
-              ? "border-red-400 bg-red-100 text-red-700"
-              : "border-zinc-200 bg-white hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-          }`}
+          className="pointer-events-none fixed inset-0 z-10"
+          aria-hidden
         >
-          <DeleteZone active={dragOverDeleteZone} />
+          <div
+            className="border-2 border-blue-500 bg-blue-500/20"
+            style={{
+              position: "fixed",
+              left: Math.min(selectionBox.startX, selectionBox.endX),
+              top: Math.min(selectionBox.startY, selectionBox.endY),
+              width: Math.abs(selectionBox.endX - selectionBox.startX),
+              height: Math.abs(selectionBox.endY - selectionBox.startY),
+            }}
+          />
         </div>
+      )}
+
+      <div className="pointer-events-none absolute inset-0 flex items-end justify-center pb-6">
+        {draggingId ? (
+          <div
+            ref={deleteZoneRef}
+            data-delete-zone
+            className={`pointer-events-auto flex cursor-default items-center gap-2 rounded-full border px-5 py-3 transition ${
+              dragOverDeleteZone
+                ? "border-red-400 bg-red-100 text-red-700"
+                : "border-zinc-200 bg-white hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+            }`}
+          >
+            <DeleteZone active={dragOverDeleteZone} />
+          </div>
+        ) : (
+          <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-3 py-2 shadow-sm">
+            <BoardToolbar
+              tool={tool}
+              onToolChange={setTool}
+              className="border-0 bg-transparent p-0"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

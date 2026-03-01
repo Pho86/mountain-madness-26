@@ -54,30 +54,34 @@ export function AuthHeader() {
           >
             Home
           </Link>
-          <Link
-            href={roomId ? `/board/${roomId}` : "/"}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            Board
-          </Link>
-          <Link
-            href={roomId ? `/budget/${roomId}` : "/budget"}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            Budget
-          </Link>
-          <Link
-            href={roomId ? `/calendar/${roomId}` : "/calendar"}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            Calendar
-          </Link>
-          <Link
-            href={roomId ? `/chores/${roomId}` : "/chores"}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            Chores
-          </Link>
+          {roomId && (
+            <>
+              <Link
+                href={`/board/${roomId}`}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+              >
+                Board
+              </Link>
+              <Link
+                href={`/budget/${roomId}`}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+              >
+                Budget
+              </Link>
+              <Link
+                href={`/calendar/${roomId}`}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+              >
+                Calendar
+              </Link>
+              <Link
+                href={`/chores/${roomId}`}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+              >
+                Chores
+              </Link>
+            </>
+          )}
         </nav>
         <div className="flex items-center gap-3">
           {user ? (

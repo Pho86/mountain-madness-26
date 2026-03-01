@@ -37,3 +37,14 @@ export type Chore = {
   lastDoneAt: number | null;
   createdAt: number;
 };
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  date: string;
+  time: string | null;
+  recurring: "none" | "daily" | "weekly" | "monthly";
+  /** For recurring: skip these dates (YYYY-MM-DD) when expanding occurrences */
+  exceptionDates?: string[];
+  createdAt: number;
+};

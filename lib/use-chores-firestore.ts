@@ -8,6 +8,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Chore } from "@/lib/types";
@@ -103,7 +104,7 @@ export function useChoresFirestore(choresId: string | null) {
   const markDone = useCallback(
     (id: string) => {
       if (!choresId) return;
-      updateDoc(taskRef(choresId, id), { lastDoneAt: Date.now() });
+      updateDoc(taskRef(choresId, id), { lastDoneAt: serverTimestamp() });
     },
     [choresId],
   );

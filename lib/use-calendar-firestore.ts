@@ -7,6 +7,7 @@ import {
   onSnapshot,
   setDoc,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { CalendarEvent } from "@/lib/types";
@@ -29,6 +30,7 @@ function toDoc(event: CalendarEvent) {
     date: event.date,
     time: event.time,
     recurring: event.recurring,
+    ...(event.exceptionDates?.length && { exceptionDates: event.exceptionDates }),
     createdAt: event.createdAt,
   };
 }
@@ -39,6 +41,7 @@ function fromDoc(data: {
   date: string;
   time: string | null;
   recurring: CalendarEvent["recurring"];
+  exceptionDates?: string[];
   createdAt: unknown;
 }): CalendarEvent {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
@@ -48,6 +51,7 @@ function fromDoc(data: {
     date: data.date ?? "",
     time: data.time ?? null,
     recurring: data.recurring ?? "none",
+    exceptionDates: data.exceptionDates ?? [],
     createdAt:
       typeof created === "object" && created?.toMillis
         ? created.toMillis()
@@ -98,5 +102,16 @@ export function useCalendarFirestore(calendarId: string | null) {
     [calendarId],
   );
 
-  return { events, connected, addEvent, deleteEvent };
+  const deleteOccurrence = useCallback(
+    (eventId: string, date: string) => {
+      if (!calendarId) return;
+      const event = events.find((e) => e.id === eventId);
+      if (!event) return;
+      const next = [...(event.exceptionDates ?? []), date];
+      updateDoc(eventRef(calendarId, eventId), { exceptionDates: next });
+    },
+    [calendarId, events],
+  );
+
+  return { events, connected, addEvent, deleteEvent, deleteOccurrence };
 }

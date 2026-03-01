@@ -54,13 +54,16 @@ export function expandEvents(
     while (cursor <= endDate && iter < maxIter) {
       iter++;
       if (cursor >= startDate) {
-        result.push({
-          date: cursor,
-          time: e.time,
-          title: e.title,
-          eventId: e.id,
-          isRecurring: true,
-        });
+        const exceptions = e.exceptionDates ?? [];
+        if (!exceptions.includes(cursor)) {
+          result.push({
+            date: cursor,
+            time: e.time,
+            title: e.title,
+            eventId: e.id,
+            isRecurring: true,
+          });
+        }
       }
       if (e.recurring === "daily") cursor = addDays(cursor, 1);
       else if (e.recurring === "weekly") cursor = addWeeks(cursor, 1);

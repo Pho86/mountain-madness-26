@@ -1,33 +1,52 @@
 "use client";
 
-type Tool = "cursor" | "sticky";
+import { CursorArrowRippleIcon, HandRaisedIcon } from "@heroicons/react/24/outline";
+
+type Tool = "cursor" | "move" | "sticky";
 
 export function BoardToolbar({
   tool,
   onToolChange,
+  className = "",
 }: {
   tool: Tool;
   onToolChange: (t: Tool) => void;
+  className?: string;
 }) {
   return (
-    <div className="flex items-center gap-0.5 border-b border-zinc-200 bg-white px-2 py-1.5">
+    <div className={`flex items-center gap-0.5 ${className}`}>
       <button
         type="button"
         onClick={() => onToolChange("cursor")}
-        className={`rounded-md p-2 transition ${
+        className={`group flex items-center gap-1.5 rounded-md px-3 py-2 transition ${
           tool === "cursor"
             ? "bg-zinc-200 text-zinc-900"
             : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
         }`}
-        title="Cursor (select & move)"
+        title="Select (click to select & point)"
         aria-pressed={tool === "cursor"}
       >
-        <CursorIcon className="h-5 w-5" />
+        <CursorArrowRippleIcon className="h-5 w-5 shrink-0" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium transition-[max-width] duration-200 group-hover:max-w-[4.5rem]">Select</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onToolChange("move")}
+        className={`group flex items-center gap-1.5 rounded-md px-3 py-2 transition ${
+          tool === "move"
+            ? "bg-zinc-200 text-zinc-900"
+            : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+        }`}
+        title="Move (pan around the board)"
+        aria-pressed={tool === "move"}
+      >
+        <HandRaisedIcon className="h-5 w-5 shrink-0" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium transition-[max-width] duration-200 group-hover:max-w-[3.5rem]">Move</span>
       </button>
       <button
         type="button"
         onClick={() => onToolChange("sticky")}
-        className={`rounded-md p-2 transition ${
+        className={`group flex items-center gap-1.5 rounded-md px-3 py-2 transition ${
           tool === "sticky"
             ? "bg-zinc-200 text-zinc-900"
             : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
@@ -35,17 +54,10 @@ export function BoardToolbar({
         title="Sticky note (click to add)"
         aria-pressed={tool === "sticky"}
       >
-        <StickyIcon className="h-5 w-5" />
+        <StickyIcon className="h-5 w-5 shrink-0" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium transition-[max-width] duration-200 group-hover:max-w-[4rem]">Sticky</span>
       </button>
     </div>
-  );
-}
-
-function CursorIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-      <path d="M4 4l7.5 15 2.5-5.5L22 10 4 4zm2.5 3.8l9.2 3.8-5.9 5.9L6.5 7.8z" />
-    </svg>
   );
 }
 
