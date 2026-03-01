@@ -795,6 +795,8 @@ export function Sticky({
     : 1;
   const stickerSide = note.authorStickerSide ?? "left";
   const nameSide = stickerSide === "left" ? "right" : "left";
+  /** Preset stickers use relative URLs (/CapyBread.png etc); uploaded images use blob: or https: */
+  const isUploadedImage = Boolean(note.imageUrl && !note.imageUrl.startsWith("/"));
 
   const handleTextareaKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -943,10 +945,10 @@ export function Sticky({
         ref={cardRef}
         className={`relative flex min-h-[200px] flex-col rounded-lg transition-colors ${
           isSelected ? "outline-2 outline-blue-500 outline-offset-0" : ""
-        } ${note.imageUrl ? "border-0 bg-transparent" : "border-2"}`}
+        } ${note.imageUrl ? (isUploadedImage ? "border border-zinc-200 bg-white" : "border-0 bg-transparent") : "border-2"}`}
         style={{
-          backgroundColor: note.imageUrl ? "transparent" : note.color,
-          borderColor: note.imageUrl ? "transparent" : borderColor,
+          backgroundColor: note.imageUrl ? (isUploadedImage ? undefined : "transparent") : note.color,
+          borderColor: note.imageUrl ? (isUploadedImage ? undefined : "transparent") : borderColor,
           ...(note.imageUrl && { minHeight: IMAGE_BASE_H * imageScale }),
         }}
       >
@@ -1061,17 +1063,35 @@ export function Sticky({
               )}
             </div>
           )}
-          {note.authorName && (
-            <div
-              className={`absolute bottom-4 max-w-[60%] text-xs text-zinc-700 ${
-                nameSide === "left" ? "left-4" : "right-4"
-              }`}
-              title={note.authorName}
-            >
-              <span className="block truncate font-medium">{note.authorName}</span>
-            </div>
+          {(note.authorIconId || note.authorName) && (!note.imageUrl || isUploadedImage) && (
+            <>
+              {note.authorName && (
+                <div
+                  className={`absolute bottom-4 max-w-[60%] text-xs text-zinc-700 ${
+                    nameSide === "left" ? "left-4" : "right-4"
+                  }`}
+                  title={note.authorName}
+                >
+                  <span className="block truncate font-medium">{note.authorName}</span>
+                </div>
+              )}
+              {note.authorIconId && !note.imageUrl && (
+                <div
+                  className={`absolute -bottom-4 z-10 ${
+                    stickerSide === "left" ? "-left-6" : "-right-6"
+                  }`}
+                  title={note.authorName}
+                >
+                  <img
+                    src={getAvatarUrl(note.authorIconId)}
+                    alt=""
+                    className="h-16 w-16"
+                  />
+                </div>
+              )}
+            </>
           )}
-          {!note.authorName && !note.imageUrl && <div className="mt-auto" />}
+          {!(note.authorIconId || note.authorName) && !note.imageUrl && <div className="mt-auto" />}
         </div>
       </div>
       {note.imageUrl && isSelected && (
