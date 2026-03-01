@@ -829,12 +829,12 @@ export default function BoardPage() {
                 height="24"
                 viewBox="0 0 24 24"
                 fill="currentColor"
-                className="h-6 w-6 text-blue-600 drop-shadow-sm"
+                className="h-6 w-6 text-blue-600"
                 aria-hidden
               >
                 <path d="M4 4l7.5 15 2.5-5.5L22 10 4 4zm2.5 3.8l9.2 3.8-5.9 5.9L6.5 7.8z" />
               </svg>
-              <span className="rounded bg-blue-600 px-2 py-0.5 text-xs font-medium text-white shadow-sm whitespace-nowrap">
+              <span className="rounded bg-blue-600 px-2 py-0.5 text-xs font-medium text-white whitespace-nowrap">
                 {c.displayName}
               </span>
             </div>
@@ -876,7 +876,7 @@ export default function BoardPage() {
             <DeleteZone active={dragOverDeleteZone} />
           </div>
         ) : (
-          <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-3 py-2 shadow-sm">
+          <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-3 py-2">
             <input
               ref={imageInputRef}
               type="file"

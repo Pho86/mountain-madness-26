@@ -11,7 +11,7 @@ import {
   type JarSlug,
 } from "@/lib/fridge-jars";
 
-const LAST_ROOM_STORAGE_KEY = "reizoko-last-room-id";
+export const LAST_ROOM_STORAGE_KEY = "reizoko-last-room-id";
 
 function JarContent({
   label,
@@ -158,13 +158,13 @@ export function FridgeLayout({
                 }}
                 aria-label="Sign out"
               >
-                <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white drop-shadow-md">
+                <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white">
                   Sign out
                 </span>
               </button>
             ) : (
               <Link
-                href="/login"
+                href="/"
                 className="relative flex h-14 min-w-40 items-center justify-center overflow-hidden bg-transparent transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-700 focus:ring-offset-2 focus:ring-offset-fridge-cream"
                 style={{
                   backgroundImage: "url(/jars/signout-pot.svg)",
@@ -174,7 +174,7 @@ export function FridgeLayout({
                 }}
                 aria-label="Sign in"
               >
-                <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white drop-shadow-md">
+                <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white">
                   Sign in
                 </span>
               </Link>

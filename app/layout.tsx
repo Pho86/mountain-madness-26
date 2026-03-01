@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Manrope } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { AuthHeader } from "@/components/AuthHeader";
 import { RedirectIfNoAvatar } from "@/components/RedirectIfNoAvatar";
@@ -22,6 +23,12 @@ const advercase = localFont({
   display: "swap",
 });
 
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Reizoko",
   description: "Sticky notes, chore charts, and cost splitting in real-time",
@@ -34,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${advercase.variable} font-sans antialiased`}>
+      <body className={`${manrope.variable} ${advercase.variable} font-sans antialiased`}>
         <Providers>
           {/* <RedirectIfNoAvatar /> */}
           {/* <AuthHeader /> */}

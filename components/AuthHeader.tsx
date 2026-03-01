@@ -26,8 +26,6 @@ export function AuthHeader() {
   const [signingOut, setSigningOut] = useState(false);
   const roomId = getRoomIdFromPath(pathname ?? "");
 
-  if (pathname === "/login") return null;
-
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
@@ -129,7 +127,7 @@ export function AuthHeader() {
             </>
           ) : (
             <Link
-              href="/login"
+              href="/"
               className="rounded-lg bg-zinc-800 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
             >
               Sign in

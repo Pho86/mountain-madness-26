@@ -14,7 +14,7 @@ export function RedirectIfNoAvatar() {
   useEffect(() => {
     if (!user || profileLoading) return;
     if (iconId != null) return;
-    if (pathname === "/profile" || pathname === "/login") return;
+    if (pathname === "/profile" || pathname === "/") return;
     router.replace("/profile");
   }, [user, profileLoading, iconId, pathname, router]);
 

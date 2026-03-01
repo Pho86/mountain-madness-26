@@ -225,7 +225,7 @@ function StickyToolbar({
           createPortal(
             <div
               data-sticky-toolbar
-              className="fixed min-w-[200px] rounded-lg border border-zinc-600 bg-[#2c2c2c] p-2.5 shadow-lg"
+              className="fixed min-w-[200px] rounded-lg border border-zinc-600 bg-[#2c2c2c] p-2.5"
               style={{
                 zIndex: 10001,
                 left: colorDropdownPos.left,
@@ -283,7 +283,7 @@ function StickyToolbar({
           createPortal(
             <div
               data-sticky-toolbar
-              className="fixed rounded-lg border border-zinc-600 bg-[#2c2c2c] p-2 shadow-lg"
+              className="fixed rounded-lg border border-zinc-600 bg-[#2c2c2c] p-2"
               style={{
                 zIndex: 10001,
                 left: customSizeDropdownPos.left,
@@ -347,7 +347,7 @@ function StickyToolbar({
           createPortal(
             <div
               data-sticky-toolbar
-              className="fixed rounded-lg border border-zinc-600 bg-[#2c2c2c] py-0.5 shadow-lg"
+              className="fixed rounded-lg border border-zinc-600 bg-[#2c2c2c] py-0.5"
               style={{
                 zIndex: 10001,
                 left: presetSizeDropdownPos.left,
@@ -895,7 +895,7 @@ export function Sticky({
 
   return (
       <div
-        className={`absolute ${note.imageUrl ? "" : "w-56"} ${isDragging ? "transition-shadow duration-150" : "transition-all duration-150"} relative`}
+        className={`absolute ${note.imageUrl ? "" : "w-56"} ${isDragging ? "transition-opacity duration-150" : "transition-all duration-150"} relative`}
         style={{
         left: x,
         top: y,
@@ -939,7 +939,7 @@ export function Sticky({
       )}
       <div
         ref={cardRef}
-        className={`relative flex min-h-[200px] flex-col rounded-lg border-2 transition-shadow ${
+        className={`relative flex min-h-[200px] flex-col rounded-lg border-2 transition-colors ${
           isSelected ? "outline-2 outline-blue-500 outline-offset-0" : ""
         }`}
         style={{
@@ -1094,7 +1094,7 @@ export function Sticky({
               aria-valuemin={IMAGE_SCALE_MIN}
               aria-valuemax={IMAGE_SCALE_MAX}
               aria-valuenow={imageScale}
-              className={`absolute z-10 h-5 w-5 cursor-se-resize rounded-full border-2 border-blue-500 bg-white shadow hover:bg-blue-50 hover:scale-110 pointer-events-auto ${
+              className={`absolute z-10 h-5 w-5 cursor-se-resize rounded-full border-2 border-blue-500 bg-white hover:bg-blue-50 hover:scale-110 pointer-events-auto ${
                 corner === "nw" ? "left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize" : ""
               } ${corner === "ne" ? "right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize" : ""} ${
                 corner === "sw" ? "bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize" : ""
@@ -1110,7 +1110,7 @@ export function Sticky({
       {isSelected && (
         <div
           data-rotation-handle
-          className="absolute left-1/2 bottom-0 z-10 h-6 w-6 -translate-x-1/2 translate-y-[calc(100%+0.5rem)] cursor-grab rounded-full border-2 border-blue-500 bg-white shadow hover:bg-blue-50 hover:scale-110 active:cursor-grabbing pointer-events-auto"
+          className="absolute left-1/2 bottom-0 z-10 h-6 w-6 -translate-x-1/2 translate-y-[calc(100%+0.5rem)] cursor-grab rounded-full border-2 border-blue-500 bg-white hover:bg-blue-50 hover:scale-110 active:cursor-grabbing pointer-events-auto"
           role="slider"
           aria-label="Rotate"
           aria-valuenow={rotationDeg}

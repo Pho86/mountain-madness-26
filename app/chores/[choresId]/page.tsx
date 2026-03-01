@@ -222,10 +222,11 @@ export default function ChoresPage() {
                 chores.map((chore) => {
                   const status = getStatus(chore);
                   const nextDue = getNextDueMs(chore);
+                  const isMarkedDone = status === "on_track" && chore.lastDoneAt != null;
                   return (
                     <li
                       key={chore.id}
-                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                      className={`flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${isMarkedDone ? "rounded-lg bg-green-50 px-3" : ""}`}
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-zinc-800">
@@ -262,7 +263,9 @@ export default function ChoresPage() {
                               ? "bg-red-100 text-red-800"
                               : status === "due_soon"
                                 ? "bg-amber-100 text-amber-800"
-                                : "bg-zinc-100 text-zinc-600"
+                                : isMarkedDone
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-zinc-100 text-zinc-600"
                           }`}
                           title={formatDue(nextDue)}
                         >

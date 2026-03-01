@@ -1,4 +1,4 @@
-export { useCalendarFirestore } from "./use-calendar-firestore";
+export { useCalendarFirestore } from "@/hooks/use-calendar-firestore";
 export {
   expandEvents,
   getMonthStartEnd,

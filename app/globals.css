@@ -18,7 +18,9 @@
   --color-fridge-outer: var(--fridge-outer);
   --color-text-on-red: var(--text-on-red);
   --color-text-on-red-muted: var(--text-on-red-muted);
-  --font-sans: var(--font-advercase), ui-sans-serif, system-ui, sans-serif;
+  /* Body: Manrope. Headings: Advercase (use font-serif in Tailwind). */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-advercase), ui-serif, Georgia, serif;
   --font-mono: ui-monospace, monospace;
 }
 
@@ -33,7 +35,7 @@ body {
   height: 100%;
   overflow: hidden;
   color: var(--text-on-red);
-  font-family: var(--font-advercase), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Board canvas: cream frame with fridge image centered */
@@ -92,6 +94,11 @@ textarea::placeholder {
   color: #737373;
 }
 
+.room-code-input::placeholder {
+  color: #304359;
+  opacity: 0.85;
+}
+
 /* Softer skeleton pulse for loading states */
 @keyframes skeleton-pulse {
   0%, 100% {
@@ -138,4 +145,44 @@ textarea::placeholder {
 /* Profile page: avatar option hover bounce */
 .profile-avatar-option:hover {
   animation: avatar-bounce 0.5s ease-out;
+}
+
+/* Home sign-in: Reizoko title appears first */
+@keyframes sign-in-hero-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Home sign-in: sticky note fades in from bottom after hero */
+@keyframes sign-in-sticky-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sign-in-hero {
+  animation: sign-in-hero-in 0.5s ease-out forwards;
+}
+
+.animate-sign-in-sticky {
+  opacity: 0;
+  animation: sign-in-sticky-in 0.6s ease-out 0.4s forwards;
+}
+
+/* Sign in with Google button hover */
+.sign-in-google-btn:hover:not(:disabled) {
+  transform: scale(1.02);
+  filter: brightness(1.08);
+}
+.sign-in-google-btn {
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
