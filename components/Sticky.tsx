@@ -26,6 +26,19 @@ const FONT_SIZE_PRESETS = [
 ];
 
 const DEFAULT_FONT_SIZE = 16;
+/** Toolbar/dropdown accent (active state) */
+const TOOLBAR_ACCENT = "#7f1d1d";
+/** Bullet list prefix per line when editing */
+const BULLET_PREFIX = "• ";
+
+function getLineStart(text: string, pos: number): number {
+  const last = text.lastIndexOf("\n", pos - 1);
+  return last === -1 ? 0 : last + 1;
+}
+
+function minCursorForLine(text: string, pos: number): number {
+  return getLineStart(text, pos) + BULLET_PREFIX.length;
+}
 const IMAGE_BASE_W = 224;
 const IMAGE_BASE_H = 200;
 const IMAGE_SCALE_MIN = 0.25;
@@ -67,7 +80,6 @@ function StickyToolbar({
   const [colorOpen, setColorOpen] = useState(false);
   const [customSizeOpen, setCustomSizeOpen] = useState(false);
   const [presetSizeOpen, setPresetSizeOpen] = useState(false);
-  const colorJustOpenedRef = useRef(false);
   const colorTriggerRef = useRef<HTMLButtonElement>(null);
   const customSizeTriggerRef = useRef<HTMLButtonElement>(null);
   const presetSizeTriggerRef = useRef<HTMLButtonElement>(null);
@@ -82,15 +94,6 @@ function StickyToolbar({
   useEffect(() => {
     setSizeInput(String(note.fontSize ?? DEFAULT_FONT_SIZE));
   }, [note.fontSize]);
-
-  useEffect(() => {
-    if (colorOpen) {
-      const t = setTimeout(() => {
-        colorJustOpenedRef.current = false;
-      }, 150);
-      return () => clearTimeout(t);
-    }
-  }, [colorOpen]);
 
   const updateDropdownPositions = useCallback(() => {
     const gap = 6;
@@ -175,16 +178,24 @@ function StickyToolbar({
 
   const toolbarContent = (
     <div
-      className={`z-9999 flex min-w-[420px] max-w-[90vw] items-center justify-between gap-1 rounded-full border border-zinc-600/80 bg-[#2c2c2c] py-2 pl-2 pr-3 transition-opacity duration-200 ${visible ? "opacity-100" : "pointer-events-none opacity-0"} ${!toolbarBarPosition && !centeredByParent ? `absolute left-1/2 bottom-full -translate-x-1/2 ${counterRotateDeg !== 0 ? "mb-8" : "mb-2"}` : ""}`}
-      style={
-        toolbarBarPosition
+      data-sticky-toolbar
+      className={`flex min-w-[420px] max-w-[90vw] items-center justify-between gap-1 rounded-full border border-zinc-600/80 bg-[#2c2c2c] py-2 pl-2 pr-3 transition-opacity duration-200 ${visible ? "opacity-100" : "pointer-events-none opacity-0"} ${!toolbarBarPosition && !centeredByParent ? `absolute left-1/2 bottom-full -translate-x-1/2 ${counterRotateDeg !== 0 ? "mb-8" : "mb-2"}` : ""}`}
+      style={{
+        zIndex: 10000,
+        ...(toolbarBarPosition
           ? undefined
           : centeredByParent
             ? { transform: `rotate(${-counterRotateDeg}deg)`, transformOrigin: "50% 100%" }
-            : { transform: `translateX(-50%) rotate(${-counterRotateDeg}deg)`, transformOrigin: "50% 100%" }
-      }
-      onPointerDown={onPointerDown}
-      onMouseDown={(e) => e.preventDefault()}
+            : { transform: `translateX(-50%) rotate(${-counterRotateDeg}deg)`, transformOrigin: "50% 100%" }),
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onPointerDown(e);
+      }}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       role="toolbar"
     >
       {/* 1. Color dropdown */}
@@ -192,11 +203,12 @@ function StickyToolbar({
         <button
           ref={colorTriggerRef}
           type="button"
-          onClick={() => {
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             setColorOpen((o) => !o);
             setCustomSizeOpen(false);
             setPresetSizeOpen(false);
-            if (!colorOpen) colorJustOpenedRef.current = true;
           }}
           className="flex items-center gap-1.5 rounded-full px-3 py-2 text-white/90 hover:bg-white/10"
           title="Note color"
@@ -212,27 +224,30 @@ function StickyToolbar({
         {colorOpen && colorDropdownPos && typeof document !== "undefined" &&
           createPortal(
             <div
-              className="fixed z-99999 min-w-[280px] rounded-xl border border-zinc-600 bg-[#2c2c2c] p-4 shadow-lg"
-              style={{ left: colorDropdownPos.left, top: colorDropdownPos.top, transform: "translateY(-100%)" }}
+              data-sticky-toolbar
+              className="fixed min-w-[200px] rounded-lg border border-zinc-600 bg-[#2c2c2c] p-2.5 shadow-lg"
+              style={{
+                zIndex: 10001,
+                left: colorDropdownPos.left,
+                top: colorDropdownPos.top,
+                transform: "translateY(-100%)",
+              }}
               onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             >
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-5 gap-2">
                 {COLORS.map((c) => (
                   <button
                     key={c.bg}
                     type="button"
                     onClick={() => {
-                      if (colorJustOpenedRef.current) {
-                        colorJustOpenedRef.current = false;
-                      } else {
-                        onUpdate({ color: c.bg });
-                        setColorOpen(false);
-                      }
+                      onUpdate({ color: c.bg });
+                      setColorOpen(false);
                     }}
-                    className="h-10 w-10 rounded-full border-2 transition hover:scale-110"
+                    className="h-8 w-8 rounded-full border-2 transition hover:scale-110"
                     style={{
                       backgroundColor: c.bg,
-                      borderColor: note.color === c.bg ? "#8b5cf6" : c.border,
+                      borderColor: note.color === c.bg ? TOOLBAR_ACCENT : c.border,
                     }}
                     title={c.label}
                     aria-label={c.label}
@@ -249,11 +264,13 @@ function StickyToolbar({
         <button
           ref={customSizeTriggerRef}
           type="button"
-          onClick={() => {
-            setCustomSizeOpen((o) => !o);
-            setColorOpen(false);
-            setPresetSizeOpen(false);
-          }}
+          onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setCustomSizeOpen((o) => !o);
+          setColorOpen(false);
+          setPresetSizeOpen(false);
+        }}
           className="flex items-center gap-1.5 rounded-full px-3 py-2 text-white/90 hover:bg-white/10"
           title="Font size (custom)"
           aria-expanded={customSizeOpen}
@@ -265,11 +282,18 @@ function StickyToolbar({
         {customSizeOpen && customSizeDropdownPos && typeof document !== "undefined" &&
           createPortal(
             <div
-              className="fixed z-99999 rounded-lg border border-zinc-600 bg-[#2c2c2c] p-3 shadow-lg"
-              style={{ left: customSizeDropdownPos.left, top: customSizeDropdownPos.top, transform: "translateY(-100%)" }}
+              data-sticky-toolbar
+              className="fixed rounded-lg border border-zinc-600 bg-[#2c2c2c] p-2 shadow-lg"
+              style={{
+                zIndex: 10001,
+                left: customSizeDropdownPos.left,
+                top: customSizeDropdownPos.top,
+                transform: "translateY(-100%)",
+              }}
               onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             >
-              <p className="mb-2 text-xs font-medium text-white/70">Font size (px)</p>
+              <p className="mb-1.5 text-xs font-medium text-white/70">Font size (px)</p>
               <input
                 type="number"
                 min={10}
@@ -290,7 +314,7 @@ function StickyToolbar({
                     (e.target as HTMLInputElement).blur();
                   }
                 }}
-                className="w-20 rounded border border-zinc-500 px-2 py-1.5 text-sm outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-white/30"
+                className="w-16 rounded border border-zinc-500 px-2 py-1 text-xs outline-none placeholder:text-zinc-400 focus:ring-1 focus:ring-white/30"
                 style={{ backgroundColor: "#3f3f46", color: "#fff" }}
                 autoFocus
               />
@@ -304,11 +328,13 @@ function StickyToolbar({
         <button
           ref={presetSizeTriggerRef}
           type="button"
-          onClick={() => {
-            setPresetSizeOpen((o) => !o);
-            setColorOpen(false);
-            setCustomSizeOpen(false);
-          }}
+          onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setPresetSizeOpen((o) => !o);
+          setColorOpen(false);
+          setCustomSizeOpen(false);
+        }}
           className="flex items-center gap-1.5 rounded-full px-3 py-2 text-white/90 hover:bg-white/10"
           title="Font size preset"
           aria-expanded={presetSizeOpen}
@@ -320,9 +346,16 @@ function StickyToolbar({
         {presetSizeOpen && presetSizeDropdownPos && typeof document !== "undefined" &&
           createPortal(
             <div
-              className="fixed z-99999 rounded-lg border border-zinc-600 bg-[#2c2c2c] py-1 shadow-lg"
-              style={{ left: presetSizeDropdownPos.left, top: presetSizeDropdownPos.top, transform: "translateY(-100%)" }}
+              data-sticky-toolbar
+              className="fixed rounded-lg border border-zinc-600 bg-[#2c2c2c] py-0.5 shadow-lg"
+              style={{
+                zIndex: 10001,
+                left: presetSizeDropdownPos.left,
+                top: presetSizeDropdownPos.top,
+                transform: "translateY(-100%)",
+              }}
               onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
             >
               {FONT_SIZE_PRESETS.map((p) => (
                 <button
@@ -332,7 +365,8 @@ function StickyToolbar({
                     applyFontSize(p.value);
                     setPresetSizeOpen(false);
                   }}
-                  className={`w-full px-4 py-2 text-left text-sm text-white/90 hover:bg-white/10 ${fontSize === p.value ? "bg-[#8b5cf6] font-medium text-white" : ""}`}
+                  className={`w-full px-3 py-1.5 text-left text-xs text-white/90 hover:bg-white/10 ${fontSize === p.value ? "font-medium text-white" : ""}`}
+                  style={fontSize === p.value ? { backgroundColor: TOOLBAR_ACCENT } : undefined}
                 >
                   {p.label}
                 </button>
@@ -348,7 +382,8 @@ function StickyToolbar({
       <button
         type="button"
         onClick={() => onUpdate({ fontWeight: (note.fontWeight ?? "normal") === "bold" ? "normal" : "bold" })}
-        className={`rounded-md px-4 py-2 font-bold ${(note.fontWeight ?? "normal") === "bold" ? "bg-[#8b5cf6] text-white" : "text-white/90 hover:bg-white/10"}`}
+        className={`rounded-md px-3 py-1.5 font-bold ${(note.fontWeight ?? "normal") === "bold" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
+        style={(note.fontWeight ?? "normal") === "bold" ? { backgroundColor: TOOLBAR_ACCENT } : undefined}
         title="Bold"
         aria-pressed={(note.fontWeight ?? "normal") === "bold"}
       >
@@ -359,7 +394,8 @@ function StickyToolbar({
       <button
         type="button"
         onClick={() => onUpdate({ fontStyle: (note.fontStyle ?? "normal") === "italic" ? "normal" : "italic" })}
-        className={`rounded-md px-4 py-2 font-serif italic ${(note.fontStyle ?? "normal") === "italic" ? "bg-[#8b5cf6] text-white" : "text-white/90 hover:bg-white/10"}`}
+        className={`rounded-md px-3 py-1.5 font-serif italic ${(note.fontStyle ?? "normal") === "italic" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
+        style={(note.fontStyle ?? "normal") === "italic" ? { backgroundColor: TOOLBAR_ACCENT } : undefined}
         title="Italic"
         aria-pressed={(note.fontStyle ?? "normal") === "italic"}
       >
@@ -370,7 +406,8 @@ function StickyToolbar({
       <button
         type="button"
         onClick={() => onUpdate({ listStyle: (note.listStyle ?? "none") === "bullet" ? "none" : "bullet" })}
-        className={`rounded-md px-4 py-2 ${(note.listStyle ?? "none") === "bullet" ? "bg-[#8b5cf6] text-white" : "text-white/90 hover:bg-white/10"}`}
+        className={`rounded-md px-3 py-1.5 ${(note.listStyle ?? "none") === "bullet" ? "text-white" : "text-white/90 hover:bg-white/10"}`}
+        style={(note.listStyle ?? "none") === "bullet" ? { backgroundColor: TOOLBAR_ACCENT } : undefined}
         title="Bulleted list"
         aria-pressed={(note.listStyle ?? "none") === "bullet"}
       >
@@ -397,12 +434,13 @@ function StickyToolbar({
   if (toolbarBarPosition && getAnchorRectRef && typeof document !== "undefined") {
     return createPortal(
       <div
+        data-sticky-toolbar
         style={{
           position: "fixed",
           left: toolbarBarPosition.left,
           top: toolbarBarPosition.top,
           transform: "translate(-50%, -100%)",
-          zIndex: 9999,
+          zIndex: 10000,
         }}
       >
         {toolbarContent}
@@ -758,17 +796,98 @@ export function Sticky({
 
   const handleTextareaKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if ((note.listStyle ?? "none") !== "bullet" || e.key !== "Enter") return;
-      e.preventDefault();
       const ta = e.currentTarget;
       const start = ta.selectionStart;
       const end = ta.selectionEnd;
-      const before = localText.slice(0, start);
-      const after = localText.slice(end);
-      const newValue = before + "\n• " + after;
-      setLocalText(newValue);
+      const isBulletMode = (note.listStyle ?? "none") === "bullet";
+
+      if (isBulletMode) {
+        const lineStart = getLineStart(localText, start);
+        const minPos = minCursorForLine(localText, start);
+
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const before = localText.slice(0, start);
+          const after = localText.slice(end);
+          const newValue = before + "\n" + BULLET_PREFIX + after;
+          setLocalText(newValue);
+          requestAnimationFrame(() => {
+            ta.selectionStart = ta.selectionEnd = start + 1 + BULLET_PREFIX.length;
+          });
+          return;
+        }
+
+        if (e.key === "ArrowLeft") {
+          if (start === end && start > 0) {
+            const newPos = start - 1;
+            const prevLineStart = getLineStart(localText, newPos);
+            if (newPos >= prevLineStart && newPos < prevLineStart + BULLET_PREFIX.length) {
+              e.preventDefault();
+              ta.selectionStart = ta.selectionEnd = prevLineStart + BULLET_PREFIX.length;
+            }
+          }
+          return;
+        }
+
+        if (e.key === "ArrowRight") {
+          if (start === end && start < localText.length) {
+            const newPos = start + 1;
+            const newLineStart = getLineStart(localText, newPos);
+            if (newPos >= newLineStart && newPos < newLineStart + BULLET_PREFIX.length) {
+              e.preventDefault();
+              ta.selectionStart = ta.selectionEnd = newLineStart + BULLET_PREFIX.length;
+            }
+          }
+          return;
+        }
+
+        if (e.key === "Backspace") {
+          if (start === end && start === minPos) {
+            if (lineStart === 0) {
+              e.preventDefault();
+              return;
+            }
+            e.preventDefault();
+            const prevLineEnd = lineStart - 1;
+            const before = localText.slice(0, prevLineEnd);
+            const after = localText.slice(end);
+            const newValue = before + after;
+            setLocalText(newValue);
+            requestAnimationFrame(() => {
+              ta.selectionStart = ta.selectionEnd = prevLineEnd;
+            });
+            return;
+          }
+        }
+
+        if (e.key === "Delete" && start === end) {
+          if (start >= lineStart && start < minPos) {
+            e.preventDefault();
+            ta.selectionStart = ta.selectionEnd = minPos;
+            return;
+          }
+        }
+      }
+    },
+    [localText, note.listStyle]
+  );
+
+  const handleTextareaSelect = useCallback(
+    (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+      if ((note.listStyle ?? "none") !== "bullet") return;
+      const ta = e.currentTarget;
       requestAnimationFrame(() => {
-        ta.selectionStart = ta.selectionEnd = start + 3;
+        let start = ta.selectionStart;
+        let end = ta.selectionEnd;
+        const startLine = getLineStart(localText, start);
+        const endLine = getLineStart(localText, end);
+        const minStart = startLine + BULLET_PREFIX.length;
+        const minEnd = endLine + BULLET_PREFIX.length;
+        if (start < minStart) start = minStart;
+        if (end < minEnd) end = minEnd;
+        if (start !== ta.selectionStart || end !== ta.selectionEnd) {
+          ta.setSelectionRange(start, end);
+        }
       });
     },
     [localText, note.listStyle]
@@ -873,17 +992,40 @@ export function Sticky({
               }}
               value={localText}
               onChange={(e) => {
-                setLocalText(e.target.value);
+                const raw = e.target.value;
+                if ((note.listStyle ?? "none") === "bullet") {
+                  const normalized = raw
+                    .split("\n")
+                    .map((line) => BULLET_PREFIX + line.replace(/^•\s*/, ""))
+                    .join("\n");
+                  setLocalText(normalized);
+                  requestAnimationFrame(() => {
+                    const ta = textareaRef.current;
+                    if (ta) {
+                      const minS = minCursorForLine(normalized, ta.selectionStart);
+                      const minE = minCursorForLine(normalized, ta.selectionEnd);
+                      if (ta.selectionStart < minS || ta.selectionEnd < minE) {
+                        ta.setSelectionRange(
+                          Math.max(ta.selectionStart, minS),
+                          Math.max(ta.selectionEnd, minE)
+                        );
+                      }
+                    }
+                  });
+                } else {
+                  setLocalText(raw);
+                }
                 adjustTextareaHeight();
               }}
               onBlur={handleBlur}
               onKeyDown={handleTextareaKeyDown}
+              onSelect={handleTextareaSelect}
               autoFocus
               placeholder="Type something…"
               rows={1}
             />
           ) : (
-            <p
+            <div
               className="min-h-20 flex-1 cursor-grab select-none wrap-break-word rounded font-normal leading-normal text-zinc-800 whitespace-pre-wrap"
               style={{
                 fontSize: fontSizePx,
@@ -895,22 +1037,28 @@ export function Sticky({
                 e.stopPropagation();
                 setLocalText(
                   (note.listStyle ?? "none") === "bullet"
-                    ? "• " + note.text.split("\n").join("\n• ")
+                    ? note.text.split("\n").map((l) => "• " + l.trimStart().replace(/^•\s?/, "")).join("\n")
                     : note.text
                 );
                 setEditing(true);
               }}
               onDragStart={(e) => e.preventDefault()}
             >
-              {isBullet && note.text
-                ? note.text.split("\n").map((line, i) => (
-                    <span key={i}>
-                      {i > 0 && <br />}
-                      • {line}
-                    </span>
-                  ))
-                : note.text || "Double-click to edit"}
-            </p>
+              {isBullet && note.text ? (
+                <ul className="list-disc pl-5 list-outside space-y-0.5 text-left" style={{ marginTop: 0, marginBottom: 0 }}>
+                  {note.text
+                    .split("\n")
+                    .map((line) => line.replace(/^\s*•\s*/, ""))
+                    .map((line, i) => (
+                      <li key={i}>{line || "\u00A0"}</li>
+                    ))}
+                </ul>
+              ) : isBullet && (!note.text || !note.text.trim()) ? (
+                "Double-click to edit"
+              ) : (
+                note.text || "Double-click to edit"
+              )}
+            </div>
           )}
           {(note.authorIconId || note.authorName) && (
             <div className="mt-auto flex items-center justify-start gap-1.5 text-xs text-zinc-600">

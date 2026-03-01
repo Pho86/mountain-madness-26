@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project for **Waifu Fridge**: user accounts (Firebase Auth), with **Firestore** for real-time sticky notes, chore charts, and cost splitting.
+This is a [Next.js](https://nextjs.org) project for **Reizoko**: user accounts (Firebase Auth), with **Firestore** for real-time sticky notes, chore charts, and cost splitting.
 
 ## Features
 
@@ -6,9 +6,9 @@ This is a [Next.js](https://nextjs.org) project for **Waifu Fridge**: user accou
 - **Sticky notes** — Share a board link; everyone sees the same stickies in real time.
 - **Chore charts & cost splitting** — Firestore structure is set up so you can add these next (see below).
 
-### 1. Firebase project (waifu-fridge)
+### 1. Firebase project (reizoko)
 
-1. In [Firebase Console](https://console.firebase.google.com/) for **waifu-fridge**:
+1. In [Firebase Console](https://console.firebase.google.com/) for **reizoko**:
    - Enable **Authentication** → Sign-in method → **Google** (enable and set support email).
    - Create **Firestore Database** if you haven’t (test mode for dev).
 2. In Project settings → Your apps → Web app, copy the config.
@@ -21,9 +21,7 @@ Copy `.env.example` to `.env.local` and fill in your Firebase config (do **not**
 cp .env.example .env.local
 ```
 
-Set every `NEXT_PUBLIC_FIREBASE_*` from the web app config. Add `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` if you use Analytics.
-
-> **Important:** Keep your real API keys and config in `.env.local` only (it is gitignored). Do not commit `.env.local` or paste secrets into `.env.example`.
+Set every `NEXT_PUBLIC_FIREBASE_*` from the web app config. 
 
 ### 3. Run
 

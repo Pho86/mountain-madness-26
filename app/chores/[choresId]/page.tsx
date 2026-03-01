@@ -91,8 +91,8 @@ export default function ChoresPage() {
   );
 
   const assigneeOptions = [
-    { value: "", label: "Unassigned" },
-    ...members.map((m) => ({ value: m.displayName, label: m.displayName })),
+    { value: "", label: "Unassigned", id: "_unassigned" },
+    ...members.map((m) => ({ value: m.displayName, label: m.displayName, id: m.id })),
   ];
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function ChoresPage() {
     const name = roomName || choresId;
     if (name) document.title = `${name} · Chores`;
     return () => {
-      document.title = "Waifu Fridge";
+      document.title = "Reizoko";
     };
   }, [roomName, choresId]);
 
@@ -127,10 +127,10 @@ export default function ChoresPage() {
 
   return (
     <FridgeLayout showJars>
-      <div className="relative flex min-h-full flex-col overflow-auto">
-        <div className="absolute right-[8.5rem] top-6 z-10">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-8 pb-14">
+        <div className="absolute right-[6.5rem] top-[3.5rem] z-10">
           <div
-            className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
+            className="rounded border-2 px-3 py-2 font-serif text-zinc-900"
             style={{
               backgroundColor: "var(--fridge-cream)",
               borderColor: "#5c4033",
@@ -148,8 +148,8 @@ export default function ChoresPage() {
             />
           </div>
         </div>
-        <main className="flex-1 overflow-auto p-4" style={{ minHeight: 0 }}>
-        <div className="mx-auto max-w-2xl space-y-6">
+        <main className="flex flex-1 flex-col items-center justify-center overflow-hidden p-4" style={{ minHeight: 0 }}>
+        <div className="mx-auto w-full max-w-2xl space-y-6">
           {/* Add chore form */}
           <section className="rounded-xl border border-zinc-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-medium text-zinc-700">
@@ -174,7 +174,7 @@ export default function ChoresPage() {
                   className="rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
                 >
                   {assigneeOptions.map((opt) => (
-                    <option key={opt.value || "_unassigned"} value={opt.value}>
+                    <option key={opt.id} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
@@ -209,13 +209,13 @@ export default function ChoresPage() {
           </section>
 
           {/* Chore list */}
-          <section className="rounded-xl border border-zinc-200 bg-white">
-            <h2 className="border-b border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700">
+          <section className="rounded-xl border border-zinc-200 bg-white p-4">
+            <h2 className="border-b border-zinc-100 pb-3 text-sm font-medium text-zinc-700">
               Tasks
             </h2>
-            <ul className="divide-y divide-zinc-100">
+            <ul className="divide-y divide-zinc-100 pt-1">
               {chores.length === 0 ? (
-                <li className="px-4 py-8 text-center text-sm text-zinc-400">
+                <li className="py-8 text-center text-sm text-zinc-400">
                   No tasks yet. Add one above and assign it to a roommate.
                 </li>
               ) : (
@@ -225,7 +225,7 @@ export default function ChoresPage() {
                   return (
                     <li
                       key={chore.id}
-                      className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-zinc-800">

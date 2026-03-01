@@ -67,7 +67,7 @@ export default function BudgetTrackerPage() {
   useEffect(() => {
     const name = roomName || budgetId;
     if (name) document.title = `${name} · Budget`;
-    return () => { document.title = "Waifu Fridge"; };
+    return () => { document.title = "Reizoko"; };
   }, [roomName, budgetId]);
 
   if (!budgetId) {
@@ -86,10 +86,10 @@ export default function BudgetTrackerPage() {
 
   return (
     <FridgeLayout showJars>
-      <div className="relative flex min-h-full flex-col overflow-auto">
-        <div className="absolute right-[8.5rem] top-6 z-10">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-8 pb-14">
+        <div className="absolute right-[6.5rem] top-[3.5rem] z-10">
           <div
-            className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
+            className="rounded border-2 px-3 py-2 font-serif text-zinc-900"
             style={{
               backgroundColor: "var(--fridge-cream)",
               borderColor: "#5c4033",
@@ -107,8 +107,8 @@ export default function BudgetTrackerPage() {
             />
           </div>
         </div>
-        <main className="flex-1 overflow-auto p-4" style={{ minHeight: 0 }}>
-        <div className="mx-auto max-w-2xl space-y-6">
+        <main className="flex flex-1 flex-col items-center justify-center overflow-hidden p-4" style={{ minHeight: 0 }}>
+        <div className="mx-auto w-full max-w-2xl space-y-6">
           {/* Summary */}
           <section className="rounded-xl border border-zinc-200 bg-white p-4">
             <h2 className="text-sm font-medium text-zinc-500">Total spent</h2>
@@ -180,20 +180,20 @@ export default function BudgetTrackerPage() {
           </section>
 
           {/* Expense list */}
-          <section className="rounded-xl border border-zinc-200 bg-white">
-            <h2 className="border-b border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-700">
+          <section className="rounded-xl border border-zinc-200 bg-white p-4">
+            <h2 className="border-b border-zinc-100 pb-3 text-sm font-medium text-zinc-700">
               Expenses
             </h2>
-            <ul className="divide-y divide-zinc-100">
+            <ul className="divide-y divide-zinc-100 pt-1">
               {expenses.length === 0 ? (
-                <li className="px-4 py-8 text-center text-sm text-zinc-400">
+                <li className="py-8 text-center text-sm text-zinc-400">
                   No expenses yet. Add one above to get started.
                 </li>
               ) : (
                 expenses.map((expense) => (
                   <li
                     key={expense.id}
-                    className="flex items-center justify-between gap-3 px-4 py-3"
+                    className="flex items-center justify-between gap-3 py-3"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-zinc-800">

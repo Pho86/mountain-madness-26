@@ -11,7 +11,7 @@ import {
   type JarSlug,
 } from "@/lib/fridge-jars";
 
-const LAST_ROOM_STORAGE_KEY = "waifu-fridge-last-room-id";
+const LAST_ROOM_STORAGE_KEY = "reizoko-last-room-id";
 
 function JarContent({
   label,
@@ -94,8 +94,8 @@ export function FridgeLayout({
     <div className="flex min-h-screen flex-col bg-fridge-outer animate-fade-in">
       {showJars && (
         <div
-          className="flex shrink-0 flex-wrap items-end gap-4 bg-fridge-cream ml-40 mr-12"
-          style={{ minHeight: "72px" }}
+          className="flex shrink-0 flex-wrap items-end gap-4 bg-fridge-cream jars-shelf"
+          style={{ minHeight: "64px" }}
           aria-label="Top of fridge"
         >
           <img
@@ -144,7 +144,7 @@ export function FridgeLayout({
               </span>
             );
           })}
-          <div className="ml-auto mr-20 flex items-end gap-2">
+          <div className="ml-auto flex items-end gap-2">
             {user ? (
               <button
                 type="button"
@@ -184,10 +184,12 @@ export function FridgeLayout({
       )}
 
       <main
-        className="flex-1 overflow-hidden bg-fridge-canvas"
-        style={{ minHeight: showJars ? "calc(100vh - 72px)" : "100vh" }}
+        className="flex flex-1 flex-col overflow-hidden bg-fridge-canvas"
+        style={{ minHeight: showJars ? "calc(100vh - 64px)" : "100vh" }}
       >
-        {children}
+        <div className="fridge-canvas-max flex min-h-0 flex-1 flex-col overflow-hidden">
+          {children}
+        </div>
       </main>
     </div>
   );

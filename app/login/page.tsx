@@ -31,7 +31,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-100 px-4">
       <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6">
         <h2 className="mb-6 text-center text-lg font-semibold text-zinc-900">
-          Sign in to Waifu Fridge
+          Sign in to Reizoko
         </h2>
 
         <button

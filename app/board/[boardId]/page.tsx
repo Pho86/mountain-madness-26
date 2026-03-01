@@ -92,13 +92,27 @@ export default function BoardPage() {
   const noteIds = new Set(notes.map((n) => n.id));
   const displayNotes = [...notes, ...pendingNotes.filter((p) => !noteIds.has(p.id))];
   const hasFittedRef = useRef(false);
+  const [canvasSizeKey, setCanvasSizeKey] = useState(0);
+
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) setCanvasSizeKey((k) => k + 1);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (roomLoading || displayNotes.length === 0 || !mainRef.current) return;
     if (hasFittedRef.current) return;
-    hasFittedRef.current = true;
 
     const rect = mainRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    hasFittedRef.current = true;
+
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -124,7 +138,7 @@ export default function BoardPage() {
     setZoom(newZoom);
     setPan({ x: newPanX, y: newPanY });
     panZoomRef.current = { pan: { x: newPanX, y: newPanY }, zoom: newZoom };
-  }, [roomLoading, displayNotes.length]);
+  }, [roomLoading, displayNotes.length, canvasSizeKey]);
 
   const handleBoardClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -142,6 +156,7 @@ export default function BoardPage() {
         return;
       }
       if ((e.target as HTMLElement).closest("[data-sticky]")) return;
+      if ((e.target as HTMLElement).closest("[data-sticky-toolbar]")) return;
       if (tool === "sticky") {
         const rect = e.currentTarget.getBoundingClientRect();
         const contentX = (e.clientX - rect.left - pan.x) / zoom;
@@ -163,6 +178,7 @@ export default function BoardPage() {
   const handlePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (tool !== "move" && (e.target as HTMLElement).closest("[data-sticky]")) return;
+      if ((e.target as HTMLElement).closest("[data-sticky-toolbar]")) return;
       if (tool === "sticky") {
         const rect = e.currentTarget.getBoundingClientRect();
         const contentX = (e.clientX - rect.left - pan.x) / zoom;
@@ -444,7 +460,12 @@ export default function BoardPage() {
 
   const handleUpdate = useCallback((note: StickyNote) => {
     const id = note.id;
-    if (note.rotation != null) {
+    const currentNote = notes.find((n) => n.id === id) ?? pendingNotes.find((p) => p.id === id);
+    const currentX = optimisticPositionRef.current[id]?.x ?? currentNote?.x ?? note.x;
+    const currentY = optimisticPositionRef.current[id]?.y ?? currentNote?.y ?? note.y;
+    const positionChanged = roundPosition(note.x) !== roundPosition(currentX) || roundPosition(note.y) !== roundPosition(currentY);
+
+    if (note.rotation != null && !positionChanged) {
       setOptimisticRotation((prev) => ({ ...prev, [id]: note.rotation! }));
       if (!draggingSelectionRef.current) {
         setFrontNoteIds((prev) => [...prev.filter((i) => i !== id), id]);
@@ -601,7 +622,7 @@ export default function BoardPage() {
   useEffect(() => {
     const name = roomName || boardId;
     if (name) document.title = `${name} · Board`;
-    return () => { document.title = "Waifu Fridge"; };
+    return () => { document.title = "Reizoko"; };
   }, [roomName, boardId]);
 
   useEffect(() => {
@@ -684,13 +705,14 @@ export default function BoardPage() {
 
   return (
     <FridgeLayout showJars>
-      <div
-        ref={mainRef}
-        className="relative flex-1 overflow-hidden bg-fridge-canvas min-h-full"
-        style={{
-          minHeight: "calc(100vh - 72px)",
-          cursor: roomLoading ? "default" : isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : tool === "move" ? "grab" : "default",
-        }}
+      <div className="flex min-h-0 flex-1 flex-col items-center overflow-hidden">
+        <div className="fridge-canvas-bounds">
+          <div
+            ref={mainRef}
+            className="relative h-full w-full overflow-hidden"
+            style={{
+              cursor: roomLoading ? "default" : isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : tool === "move" ? "grab" : "default",
+            }}
         onClick={roomLoading ? undefined : handleBoardClick}
         onPointerDown={roomLoading ? undefined : handlePointerDown}
         onPointerMove={roomLoading ? undefined : handlePointerMove}
@@ -708,14 +730,14 @@ export default function BoardPage() {
             onPointerMove={(e) => e.stopPropagation()}
           >
             <div
-              className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
+              className="rounded border-2 px-3 py-2 font-serif text-zinc-900"
               style={{
                 backgroundColor: "var(--fridge-cream)",
                 borderColor: "#5c4033",
               }}
             >
               <EditableRoomName
-                name={roomName || boardId || "Stella's Fridge"}
+                name={roomName || boardId || "Reizoko"}
                 roomCode={boardId}
                 onSave={setRoomName}
                 hideCode={false}
@@ -820,6 +842,7 @@ export default function BoardPage() {
         </div>
         )}
       </div>
+      </div>
 
       {selectionBox && (
         <div
@@ -871,6 +894,7 @@ export default function BoardPage() {
           </div>
         )}
       </div>
+    </div>
     </FridgeLayout>
   );
 }

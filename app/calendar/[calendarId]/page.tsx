@@ -32,7 +32,7 @@ export default function CalendarPage() {
   useEffect(() => {
     const name = roomName || calendarId;
     if (name) document.title = `${name} · Calendar`;
-    return () => { document.title = "Waifu Fridge"; };
+    return () => { document.title = "Reizoko"; };
   }, [roomName, calendarId]);
 
   if (!calendarId) {
@@ -51,11 +51,11 @@ export default function CalendarPage() {
 
   return (
     <FridgeLayout showJars>
-      <div className="relative flex min-h-full flex-col overflow-auto">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-8 pb-14">
         {!roomLoading && calendarId && (
-          <div className="absolute right-[8.5rem] top-6 z-10">
+          <div className="absolute right-[6.5rem] top-[3.5rem] z-10">
             <div
-              className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
+              className="rounded border-2 px-3 py-2 font-serif text-zinc-900"
               style={{
                 backgroundColor: "var(--fridge-cream)",
                 borderColor: "#5c4033",
@@ -74,7 +74,7 @@ export default function CalendarPage() {
             </div>
           </div>
         )}
-        <main className="flex-1 overflow-auto p-4" style={{ minHeight: 0 }}>
+        <main className="flex flex-1 flex-col items-center justify-center overflow-hidden p-4" style={{ minHeight: 0 }}>
           <div className="mx-auto w-full max-w-2xl">
             <BoardCalendar
               calendarId={calendarId}

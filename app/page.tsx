@@ -47,7 +47,7 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        <div className="flex h-full flex-col items-center justify-center overflow-auto px-4 py-6">
+        <div className="flex h-full flex-col items-center justify-center overflow-hidden px-4 py-6">
           <div className="flex w-full max-w-md flex-col items-center gap-6">
             <section className="rounded-xl border border-zinc-200 bg-white p-4 w-full">
               <h2 className="mb-3 text-sm font-medium text-zinc-500">

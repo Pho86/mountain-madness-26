@@ -8,6 +8,7 @@
   --text-on-red-muted: #fef3c7;
   --fridge-cream: #FBE8D2;
   --fridge-outer: #FBE8D2;
+  --canvas-max-width: 1280px;
 }
 
 @theme inline {
@@ -17,15 +18,22 @@
   --color-fridge-outer: var(--fridge-outer);
   --color-text-on-red: var(--text-on-red);
   --color-text-on-red-muted: var(--text-on-red-muted);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-advercase), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
   background-color: var(--fridge-cream);
   min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   color: var(--text-on-red);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-advercase), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Board canvas: cream frame with fridge image centered */
@@ -35,9 +43,40 @@ body {
   background-size: contain;
   background-position: top center;
   background-repeat: no-repeat;
-  margin: 2rem;
-  margin-top: 0;
+  margin-inline: 2rem;
+  margin-block: 0;
   box-sizing: border-box;
+}
+
+/* Bounds of the fridge image (same aspect ratio as Fridge.png) – used to clip the board canvas */
+.fridge-canvas-bounds {
+  /* Wider aspect ratio so the canvas uses more screen space */
+  --fridge-aspect-ratio: 4 / 3;
+  flex: 1 1 0;
+  margin-bottom: 3.5rem;
+  margin-top: 2rem;
+  max-width: var(--canvas-max-width);
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  aspect-ratio: var(--fridge-aspect-ratio);
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+/* Jars shelf: max width canvas, centered */
+.jars-shelf {
+  max-width: var(--canvas-max-width);
+  width: 100%;
+  margin-inline: auto;
+}
+
+/* Main content area: same max-width on all screens (board, profile, budget, chores, calendar, home) */
+.fridge-canvas-max {
+  width: 100%;
+  max-width: var(--canvas-max-width);
+  margin-inline: auto;
 }
 
 /* Inputs always readable: light background + dark text (avoids white-on-white in dark mode) */
@@ -78,4 +117,25 @@ textarea::placeholder {
 
 .animate-fade-in {
   animation: fade-in 0.35s ease-out;
+}
+
+/* Avatar hover bounce on profile page */
+@keyframes avatar-bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    transform: translateY(-8px) scale(1.05);
+  }
+  50% {
+    transform: translateY(2px) scale(1.02);
+  }
+  70% {
+    transform: translateY(-4px) scale(1.03);
+  }
+}
+
+/* Profile page: avatar option hover bounce */
+.profile-avatar-option:hover {
+  animation: avatar-bounce 0.5s ease-out;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, getDocFromServer, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const ROOMS = "rooms";
@@ -28,11 +28,12 @@ export function useRoom(roomId: string | null) {
     let cancelled = false;
     setLoading(true);
     const ref = doc(db, ROOMS, roomId);
-    getDoc(ref)
+    getDocFromServer(ref)
       .then((snapshot) => {
         if (cancelled) return;
         const data = snapshot.data();
-        setNameState((data?.name as string) ?? roomId);
+        const savedName = data?.name;
+        setNameState(typeof savedName === "string" && savedName.trim() ? savedName.trim() : roomId);
       })
       .catch(() => {
         if (!cancelled) setNameState(roomId);
