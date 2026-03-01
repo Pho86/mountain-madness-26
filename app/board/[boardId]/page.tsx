@@ -579,6 +579,7 @@ export default function BoardPage() {
         x,
         y,
         text: "",
+        imageScale: 2 / 3,
         color: "#f5f5f5",
         imageUrl: url,
         createdAt: Date.now(),
