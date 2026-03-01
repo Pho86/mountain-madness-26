@@ -99,17 +99,17 @@ export function AuthHeader() {
                 <img
                   src={getAvatarUrl(iconId)}
                   alt=""
-                  className="h-8 w-8 rounded-full object-cover"
+                  className="h-10 w-10 rounded-full object-cover"
                 />
               ) : user.photoURL ? (
                 <img
                   src={user.photoURL}
                   alt=""
-                  className="h-8 w-8 rounded-full object-cover"
+                  className="h-10 w-10 rounded-full object-cover"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-300 text-sm font-medium text-zinc-600">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-300 text-sm font-medium text-zinc-600">
                   {(user.displayName || user.email || "?")
                     .charAt(0)
                     .toUpperCase()}

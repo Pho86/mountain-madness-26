@@ -241,7 +241,7 @@ export default function ChoresPage() {
                                 <img
                                   src={getAvatarUrl(member.iconId)}
                                   alt=""
-                                  className="h-4 w-4 shrink-0 rounded-full object-cover"
+                                  className="h-6 w-6 shrink-0 rounded-full object-cover"
                                 />
                                 <span>
                                   {chore.assignee} · every {chore.frequencyDays}{" "}

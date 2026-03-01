@@ -918,7 +918,7 @@ export function Sticky({
                 <img
                   src={getAvatarUrl(note.authorIconId)}
                   alt=""
-                  className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-black/10"
+                  className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-black/10"
                 />
               )}
               {note.authorName && (

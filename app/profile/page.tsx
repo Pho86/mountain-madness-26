@@ -55,7 +55,7 @@ export default function ProfilePage() {
             <img
               src={getAvatarUrl(iconId)}
               alt="Your avatar"
-              className="h-20 w-20 rounded-full border-2 border-zinc-200 object-cover"
+              className="h-24 w-24 rounded-full border-2 border-zinc-200 object-cover"
             />
           </div>
         )}
@@ -66,7 +66,7 @@ export default function ProfilePage() {
               key={id}
               type="button"
               onClick={() => handleSelect(id)}
-              className={`relative aspect-square overflow-hidden rounded-full border-2 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 ${
+              className={`relative h-24 w-24 overflow-hidden rounded-full border-2 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 ${
                 iconId === id
                   ? "border-zinc-800 ring-2 ring-zinc-400 ring-offset-2"
                   : "border-zinc-200 hover:border-zinc-300"
