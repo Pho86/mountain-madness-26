@@ -21,6 +21,10 @@ import type { StickyNote } from "@/lib/types";
 type Tool = "cursor" | "move" | "sticky";
 
 const DELETE_ZONE_SELECTOR = "[data-delete-zone]";
+const STICKY_NOTE_WIDTH = 224;
+const STICKY_NOTE_HEIGHT = 200;
+const FIT_PADDING = 48;
+const MAX_ZOOM_FIT = 1.2;
 
 function isPointInRect(x: number, y: number, rect: DOMRect): boolean {
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
@@ -87,6 +91,40 @@ export default function BoardPage() {
 
   const noteIds = new Set(notes.map((n) => n.id));
   const displayNotes = [...notes, ...pendingNotes.filter((p) => !noteIds.has(p.id))];
+  const hasFittedRef = useRef(false);
+
+  useEffect(() => {
+    if (roomLoading || displayNotes.length === 0 || !mainRef.current) return;
+    if (hasFittedRef.current) return;
+    hasFittedRef.current = true;
+
+    const rect = mainRef.current.getBoundingClientRect();
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const note of displayNotes) {
+      const x = note.x;
+      const y = note.y;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + STICKY_NOTE_WIDTH);
+      maxY = Math.max(maxY, y + STICKY_NOTE_HEIGHT);
+    }
+    const contentW = Math.max(maxX - minX, 100);
+    const contentH = Math.max(maxY - minY, 100);
+    const zoomW = (rect.width - 2 * FIT_PADDING) / contentW;
+    const zoomH = (rect.height - 2 * FIT_PADDING) / contentH;
+    const newZoom = Math.min(zoomW, zoomH, MAX_ZOOM_FIT);
+    const contentCenterX = minX + contentW / 2;
+    const contentCenterY = minY + contentH / 2;
+    const newPanX = rect.width / 2 - contentCenterX * newZoom;
+    const newPanY = rect.height / 2 - contentCenterY * newZoom;
+
+    setZoom(newZoom);
+    setPan({ x: newPanX, y: newPanY });
+    panZoomRef.current = { pan: { x: newPanX, y: newPanY }, zoom: newZoom };
+  }, [roomLoading, displayNotes.length]);
 
   const handleBoardClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -663,7 +701,7 @@ export default function BoardPage() {
         {/* Fridge name + room code plaque (on the fridge, top right) */}
         {!roomLoading && boardId && (
           <div
-            className="absolute right-28 top-6 z-10"
+            className="absolute right-[6.5rem] top-6 z-10"
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
             onPointerMove={(e) => e.stopPropagation()}

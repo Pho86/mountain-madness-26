@@ -51,9 +51,9 @@ export default function CalendarPage() {
 
   return (
     <FridgeLayout showJars>
-      <div className="flex min-h-full flex-col overflow-auto">
+      <div className="relative flex min-h-full flex-col overflow-auto">
         {!roomLoading && calendarId && (
-          <div className="shrink-0 p-4 pr-6 pt-6 flex justify-end">
+          <div className="absolute right-[8.5rem] top-6 z-10">
             <div
               className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
               style={{
@@ -75,14 +75,16 @@ export default function CalendarPage() {
           </div>
         )}
         <main className="flex-1 overflow-auto p-4" style={{ minHeight: 0 }}>
-          <BoardCalendar
-            calendarId={calendarId}
-            events={events}
-            connected={connected}
-            addEvent={addEvent}
-            deleteEvent={deleteEvent}
-            deleteOccurrence={deleteOccurrence}
-          />
+          <div className="mx-auto w-full max-w-2xl">
+            <BoardCalendar
+              calendarId={calendarId}
+              events={events}
+              connected={connected}
+              addEvent={addEvent}
+              deleteEvent={deleteEvent}
+              deleteOccurrence={deleteOccurrence}
+            />
+          </div>
         </main>
       </div>
     </FridgeLayout>

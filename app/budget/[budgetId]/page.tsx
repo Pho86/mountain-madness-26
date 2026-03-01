@@ -86,8 +86,8 @@ export default function BudgetTrackerPage() {
 
   return (
     <FridgeLayout showJars>
-      <div className="flex min-h-full flex-col overflow-auto">
-        <div className="shrink-0 p-4 pr-6 pt-6 flex justify-end">
+      <div className="relative flex min-h-full flex-col overflow-auto">
+        <div className="absolute right-[8.5rem] top-6 z-10">
           <div
             className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
             style={{
