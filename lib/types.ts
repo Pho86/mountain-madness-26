@@ -15,6 +15,8 @@ export type StickyNote = {
   listStyle?: "none" | "bullet";
   createdAt: number;
   authorName?: string;
+  /** Avatar icon ID (from user profile) when note was created */
+  authorIconId?: string;
 };
 
 export type BoardState = {

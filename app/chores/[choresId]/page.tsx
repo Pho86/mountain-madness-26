@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/hooks/use-user-rooms";
 import { useRoom } from "@/hooks/use-room";
 import { useRoomMembers } from "@/hooks/use-room-members";
+import { useUserProfile } from "@/lib/use-user-profile";
+import { getAvatarUrl } from "@/lib/avatars";
 import { ChoresPageSkeleton } from "@/components/ChoresPageSkeleton";
 import { RoomPageHeader } from "@/components/RoomPageHeader";
 import type { Chore } from "@/lib/types";
@@ -56,6 +58,7 @@ export default function ChoresPage() {
   const { addRoom } = useUserRooms(user?.uid ?? null);
   const { name: roomName, ensureRoomExists, loading: roomLoading } =
     useRoom(choresId);
+  const { iconId: currentUserIconId } = useUserProfile(user?.uid ?? null);
   const { members, ensureCurrentUser } = useRoomMembers(choresId);
   const { chores, connected, addChore, markDone, deleteChore } =
     useChoresFirestore(choresId);
@@ -65,8 +68,8 @@ export default function ChoresPage() {
   const [frequencyDays, setFrequencyDays] = useState(7);
 
   useEffect(() => {
-    if (user && choresId) ensureCurrentUser(user);
-  }, [user, choresId, ensureCurrentUser]);
+    if (user && choresId) ensureCurrentUser(user, currentUserIconId);
+  }, [user, choresId, ensureCurrentUser, currentUserIconId]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -209,9 +212,30 @@ export default function ChoresPage() {
                         <p className="font-medium text-zinc-800">
                           {chore.title}
                         </p>
-                        <p className="text-xs text-zinc-500">
-                          {chore.assignee} · every {chore.frequencyDays}{" "}
-                          {chore.frequencyDays === 1 ? "day" : "days"}
+                        <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+                          {(() => {
+                            const member = members.find(
+                              (m) => m.displayName === chore.assignee
+                            );
+                            return member?.iconId ? (
+                              <>
+                                <img
+                                  src={getAvatarUrl(member.iconId)}
+                                  alt=""
+                                  className="h-4 w-4 shrink-0 rounded-full object-cover"
+                                />
+                                <span>
+                                  {chore.assignee} · every {chore.frequencyDays}{" "}
+                                  {chore.frequencyDays === 1 ? "day" : "days"}
+                                </span>
+                              </>
+                            ) : (
+                              <span>
+                                {chore.assignee} · every {chore.frequencyDays}{" "}
+                                {chore.frequencyDays === 1 ? "day" : "days"}
+                              </span>
+                            );
+                          })()}
                         </p>
                         <span
                           className={`mt-1 inline-block rounded px-2 py-0.5 text-xs font-medium ${
