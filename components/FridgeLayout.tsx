@@ -110,7 +110,7 @@ export function FridgeLayout({
             const baseClassName =
               "relative flex w-20 shrink-0 flex-col items-center transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fridge-cream focus:ring-offset-fridge-outer";
             const activeClassName = isActive ? " ring-2 ring-amber-600 ring-offset-2 ring-offset-fridge-cream scale-105" : "";
-            const interactiveClassName = jarsClickable ? " hover:scale-105" : " cursor-default";
+            const interactiveClassName = jarsClickable ? " hover:[animation:wiggle_0.4s_ease-in-out_infinite] hover:scale-100" : " cursor-default";
             const jarClassName = baseClassName + activeClassName + interactiveClassName;
 
             const content = (

@@ -320,3 +320,9 @@ textarea::placeholder {
   background-color: var(--expenses-form-text);
   color: white;
 }
+
+/* Jar keyframes */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
