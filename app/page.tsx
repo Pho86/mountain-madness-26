@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FridgeLayout } from "@/components/FridgeLayout";
+import { Modal } from "@/components/Modal";
 import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/hooks/use-user-rooms";
 import { useRoomNames } from "@/hooks/use-room-names";
@@ -36,13 +37,14 @@ function GoogleIcon() {
 
 export default function Home() {
   const { user, signInWithGoogle } = useAuth();
-  const { rooms } = useUserRooms(user?.uid ?? null);
+  const { rooms, removeRoom } = useUserRooms(user?.uid ?? null);
   const roomNames = useRoomNames(rooms);
   const [signInError, setSignInError] = useState("");
   const [signInBusy, setSignInBusy] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [leavingRoomId, setLeavingRoomId] = useState<string | null>(null);
   const router = useRouter();
   const roomCode =
     typeof crypto !== "undefined" && crypto.randomUUID
@@ -77,6 +79,12 @@ export default function Home() {
     } finally {
       setJoining(false);
     }
+  };
+
+  const handleConfirmLeaveRoom = async () => {
+    if (!leavingRoomId) return;
+    await removeRoom(leavingRoomId);
+    setLeavingRoomId(null);
   };
 
   return (
@@ -128,10 +136,10 @@ export default function Home() {
           style={{ minHeight: "calc(100vh - 64px)" }}
         >
           <div className="flex w-full max-w-3xl flex-col items-center gap-10">
-            <h1 className="text-center font-serif text-4xl font-medium tracking-wide md:text-6xl" style={{ color: "#F7EAD7" }}>
+            <h1 className="home-item text-center font-serif text-4xl font-medium tracking-wide md:text-6xl" style={{ color: "#F7EAD7" }}>
               Reizoko
             </h1>
-            <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-[40fr_57fr]">
+            <div className="home-item grid w-full grid-cols-1 gap-6 md:grid-cols-[40fr_57fr]">
               <div
                 className="relative rounded-lg px-6 pb-6 pt-14"
                 style={{ backgroundColor: "#804938" }}
@@ -189,7 +197,7 @@ export default function Home() {
             </div>
             {rooms.length > 0 && (
               <section
-                className="relative w-full max-w-3xl rounded-lg px-6 pb-6 pt-14"
+                className="home-item relative w-full max-w-3xl rounded-lg px-6 pb-6 pt-14"
                 style={{ backgroundColor: "#6E4537" }}
               >
                 <DottedHoles count={7} />
@@ -198,15 +206,26 @@ export default function Home() {
                 </h2>
                 <ul className="space-y-1">
                   {rooms.slice(0, 5).map((id) => (
-                    <li key={id}>
+                    <li key={id} className="flex items-center justify-between gap-2">
                       <Link
                         href={`/board/${id}`}
-                        className="block rounded-lg py-2 pl-3 pr-3 -ml-3 mr-3 text-sm transition-all duration-200 hover:bg-white/20"
+                        className="flex-1 rounded-lg py-2 pl-3 pr-3 -ml-3 mr-1 text-sm transition-all duration-200 hover:bg-white/20"
                         style={{ color: "#F7EAD7" }}
                       >
                         {roomNames[id] && roomNames[id] !== id ? roomNames[id] : "Unnamed room"}
                         <span className="ml-2 font-mono text-xs opacity-80">{id}</span>
                       </Link>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setLeavingRoomId(id);
+                        }}
+                        className="text-xs font-medium text-red-100 underline-offset-2 hover:underline hover:text-red-200"
+                      >
+                        Leave
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -215,6 +234,30 @@ export default function Home() {
           </div>
         </div>
       )}
+      <Modal
+        open={!!leavingRoomId}
+        onClose={() => setLeavingRoomId(null)}
+      >
+        <p className="mb-8 text-md text-zinc-800">
+          Leave this room? You can re-join later with the room code.
+        </p>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            className="min-h-[36px] cursor-pointer rounded-full bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700"
+            onClick={handleConfirmLeaveRoom}
+          >
+            Leave team
+          </button>
+          <button
+            type="button"
+            className="min-h-[36px] cursor-pointer rounded-full border border-zinc-200 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-200"
+            onClick={() => setLeavingRoomId(null)}
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
     </FridgeLayout>
   );
 }

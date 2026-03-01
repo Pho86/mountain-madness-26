@@ -10,6 +10,7 @@ import {
   getMonthGrid,
   type EventOccurrence,
 } from "@/lib/calendar-utils";
+import { Modal } from "@/components/Modal";
 
 type ViewMode = "month" | "week" | "list";
 
@@ -62,6 +63,9 @@ export function BoardCalendar({
   const [time, setTime] = useState("");
   const [recurring, setRecurring] =
     useState<CalendarEvent["recurring"]>("none");
+  const [endDate, setEndDate] = useState<string>("");
+  type PendingDelete = { eventId: string; date: string; isRecurring: boolean };
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const year = current.getFullYear();
   const month = current.getMonth();
@@ -76,12 +80,14 @@ export function BoardCalendar({
         date,
         time: time.trim() || null,
         recurring,
+        endDate: recurring === "none" ? null : (endDate || date),
         createdAt: Date.now(),
       };
       addEvent(event);
       setTitle("");
       setTime("");
       setRecurring("none");
+      setEndDate("");
       setShowAddForm(false);
     },
     [addEvent, title, date, time, recurring],
@@ -107,6 +113,14 @@ export function BoardCalendar({
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     setCurrent(d);
+  }, []);
+
+  const handleRequestDelete = useCallback((o: EventOccurrence) => {
+    setPendingDelete({
+      eventId: o.eventId,
+      date: o.date,
+      isRecurring: o.isRecurring,
+    });
   }, []);
 
   function rangeForList() {
@@ -140,38 +154,47 @@ export function BoardCalendar({
   const todayStr = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border border-zinc-200 overflow-hidden">
+    <div
+      className="flex h-full flex-col rounded-lg overflow-hidden"
+      style={{
+        backgroundColor: "var(--chores-form-bg)",
+        border: "1px solid #e3c7a2",
+      }}
+    >
       {/* Calendar header: view toggle + nav */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 bg-zinc-50 px-4 py-2">
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-zinc-200 bg-white p-0.5">
+      <div
+        className="flex flex-wrap items-center justify-between gap-3 px-6 py-3"
+        style={{ backgroundColor: "var(--chores-blue-dark)" }}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex rounded-full border border-white/40 bg-white/10 p-0.5">
             {(["month", "week", "list"] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => setViewMode(mode)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize ${
+                className={`min-h-[36px] rounded-full px-4 text-sm font-medium capitalize ${
                   viewMode === mode
-                    ? "bg-zinc-800 text-white"
-                    : "text-zinc-600 hover:bg-zinc-100"
+                    ? "bg-[#F7EAD7] text-[#3B4078]"
+                    : "text-[#F7EAD7] hover:bg-white/10"
                 }`}
               >
                 {mode}
               </button>
             ))}
           </div>
-          <span className="text-sm text-zinc-500">
+          <span className="chores-font text-sm font-medium text-[#F7EAD7]">
             {viewMode === "month" && formatMonthYear(year, month)}
             {viewMode === "week" &&
               `${formatDateShort(rangeStart)} – ${formatDateShort(rangeEnd)}`}
             {viewMode === "list" && "Upcoming"}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={goPrev}
-            className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200"
+            className="min-h-[36px] rounded-full border border-white/60 p-1.5 text-[#F7EAD7] hover:bg-white/10"
             aria-label="Previous"
           >
             <ChevronLeftIcon className="h-5 w-5" />
@@ -179,14 +202,14 @@ export function BoardCalendar({
           <button
             type="button"
             onClick={goToday}
-            className="rounded px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-200"
+            className="min-h-[36px] rounded-full border border-white/60 px-3 text-sm font-medium text-[#F7EAD7] hover:bg-white/10"
           >
             Today
           </button>
           <button
             type="button"
             onClick={goNext}
-            className="rounded p-1.5 text-zinc-600 hover:bg-zinc-200"
+            className="min-h-[36px] rounded-full border border-white/60 p-1.5 text-[#F7EAD7] hover:bg-white/10"
             aria-label="Next"
           >
             <ChevronRightIcon className="h-5 w-5" />
@@ -195,37 +218,45 @@ export function BoardCalendar({
       </div>
 
       {/* Add event */}
-      <div className="border-b border-zinc-100 px-4 py-2">
+      <div className="border-b border-[#e3c7a2] px-6 py-3">
         {showAddForm ? (
-          <form onSubmit={handleAddEvent} className="flex flex-col gap-2">
+          <form onSubmit={handleAddEvent} className="flex flex-col gap-3">
             <input
               type="text"
-              placeholder="Event title"
+              placeholder="Event title *"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="rounded border border-zinc-300 px-3 py-2 text-sm"
+              className="chores-form-field w-full"
               autoFocus
             />
             <div className="flex flex-wrap gap-2">
               <input
                 type="date"
+                placeholder="Date *"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                className="chores-form-field"
               />
               <input
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                className="chores-form-field"
                 placeholder="Time (optional)"
               />
               <select
                 value={recurring}
-                onChange={(e) =>
-                  setRecurring(e.target.value as CalendarEvent["recurring"])
-                }
-                className="rounded border border-zinc-300 px-3 py-2 text-sm"
+                onChange={(e) => {
+                  const next = e.target.value as CalendarEvent["recurring"];
+                  setRecurring(next);
+                  if (next !== "none" && !endDate) {
+                    setEndDate(date);
+                  }
+                  if (next === "none") {
+                    setEndDate("");
+                  }
+                }}
+                className="chores-form-field"
               >
                 {RECURRING_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -233,6 +264,16 @@ export function BoardCalendar({
                   </option>
                 ))}
               </select>
+              {recurring !== "none" && (
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="chores-form-field"
+                  min={date}
+                  placeholder="End date *"
+                />
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -254,21 +295,21 @@ export function BoardCalendar({
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
-            className="rounded bg-zinc-100 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-200"
+            className="min-h-[36px] rounded-full bg-[#505786] px-4 text-sm font-medium text-white shadow-sm hover:bg-[#3f4568]"
           >
-            + Add event
+            + Add Event
           </button>
         )}
       </div>
 
       {/* View content */}
-      <div className="flex-1 overflow-auto p-4 min-h-[320px]">
+      <div className="flex-1 overflow-auto p-6 min-h-[320px]">
         {viewMode === "month" && (
-          <div className="grid grid-cols-7 gap-px bg-zinc-200 rounded-lg overflow-hidden">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+          <div className="grid grid-cols-7 gap-px rounded-lg border border-[#e3c7a2] bg-[#e3c7a2] overflow-hidden">
+            {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
               <div
                 key={day}
-                className="bg-zinc-50 py-1 text-center text-xs font-medium text-zinc-500"
+                className="bg-[#e5c29a] py-1.5 text-center text-xs font-medium text-[#3B4078]"
               >
                 {day}
               </div>
@@ -276,17 +317,17 @@ export function BoardCalendar({
             {monthGrid.flat().map((cell, i) => (
               <div
                 key={i}
-                className={`min-h-[80px] bg-white p-1 ${!cell ? "bg-zinc-50/50" : ""} ${cell === todayStr ? "relative" : ""}`}
+                className={`min-h-[80px] bg-[#fbe4c5] p-2 ${!cell ? "bg-[#f5d6b3]" : ""} ${cell === todayStr ? "relative" : ""}`}
               >
                 {cell && (
                   <>
                     {cell === todayStr && (
-                      <span className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+                      <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
                         {new Date(cell + "T12:00:00").getDate()}
                       </span>
                     )}
                     {cell !== todayStr && (
-                      <span className="text-sm text-zinc-600">
+                      <span className="text-sm font-medium text-[#c8463a]">
                         {new Date(cell + "T12:00:00").getDate()}
                       </span>
                     )}
@@ -345,11 +386,7 @@ export function BoardCalendar({
                         </span>
                         <button
                           type="button"
-                          onClick={() =>
-                            o.isRecurring
-                              ? deleteOccurrence(o.eventId, o.date)
-                              : deleteEvent(o.eventId)
-                          }
+                          onClick={() => handleRequestDelete(o)}
                           className="text-blue-600 hover:text-red-600"
                           aria-label={o.isRecurring ? "Remove this occurrence" : "Delete"}
                         >
@@ -386,11 +423,7 @@ export function BoardCalendar({
                   </div>
                   <button
                     type="button"
-                    onClick={() =>
-                      o.isRecurring
-                        ? deleteOccurrence(o.eventId, o.date)
-                        : deleteEvent(o.eventId)
-                    }
+                    onClick={() => handleRequestDelete(o)}
                     className="rounded p-1 text-zinc-400 hover:bg-zinc-200 hover:text-red-600"
                     aria-label={o.isRecurring ? "Remove this occurrence" : "Delete event"}
                   >
@@ -402,6 +435,52 @@ export function BoardCalendar({
           </ul>
         )}
       </div>
+
+      <Modal
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+      >
+        {pendingDelete && (
+          <>
+            <p className="mb-3 text-sm text-zinc-800">
+              {pendingDelete.isRecurring
+                ? "This event repeats. What would you like to delete?"
+                : "Delete this event?"}
+            </p>
+            <div className="flex flex-col gap-2">
+              {pendingDelete.isRecurring && (
+                <button
+                  type="button"
+                  className="min-h-[36px] rounded-full border border-zinc-300 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+                  onClick={() => {
+                    deleteOccurrence(pendingDelete.eventId, pendingDelete.date);
+                    setPendingDelete(null);
+                  }}
+                >
+                  Delete only this date
+                </button>
+              )}
+              <button
+                type="button"
+                className="min-h-[36px] rounded-full bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700"
+                onClick={() => {
+                  deleteEvent(pendingDelete.eventId);
+                  setPendingDelete(null);
+                }}
+              >
+                {pendingDelete.isRecurring ? "Delete all occurrences" : "Delete event"}
+              </button>
+              <button
+                type="button"
+                className="min-h-[36px] rounded-full border border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

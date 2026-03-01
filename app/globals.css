@@ -112,16 +112,36 @@ textarea::placeholder {
 
 @keyframes fade-in {
   from {
-    opacity: 0.85;
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .animate-fade-in {
-  animation: fade-in 0.35s ease-out;
+  animation: fade-in 0.9s ease-out;
 }
+
+/* Homepage (logged-in) sections: fade/slide in individually */
+@keyframes home-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-item {
+  opacity: 0;
+  animation: home-item-in 0.8s ease-out forwards;
+}
+
 
 /* Avatar hover bounce on profile page */
 @keyframes avatar-bounce {

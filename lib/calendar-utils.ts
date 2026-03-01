@@ -51,7 +51,8 @@ export function expandEvents(
     let cursor = e.date;
     const maxIter = 500;
     let iter = 0;
-    while (cursor <= endDate && iter < maxIter) {
+    const seriesEnd = e.endDate && e.endDate < endDate ? e.endDate : endDate;
+    while (cursor <= seriesEnd && iter < maxIter) {
       iter++;
       if (cursor >= startDate) {
         const exceptions = e.exceptionDates ?? [];
