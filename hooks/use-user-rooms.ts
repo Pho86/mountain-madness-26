@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { arrayUnion, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { arrayRemove, arrayUnion, doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const USERS = "users";
@@ -42,5 +42,14 @@ export function useUserRooms(userId: string | null) {
     [userId]
   );
 
-  return { rooms, loading, addRoom };
+  const removeRoom = useCallback(
+    async (roomId: string) => {
+      if (!userId || !roomId.trim()) return;
+      const ref = doc(db, USERS, userId);
+      await updateDoc(ref, { roomIds: arrayRemove(roomId.trim()) });
+    },
+    [userId]
+  );
+
+  return { rooms, loading, addRoom, removeRoom };
 }

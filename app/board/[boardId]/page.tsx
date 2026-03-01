@@ -576,6 +576,7 @@ export default function BoardPage() {
           imageUrl: blob.url,
           createdAt: Date.now(),
           authorName: authorName ?? undefined,
+          authorIconId: authorIconId ?? undefined,
         };
         addNote(note);
         setSelectedNoteIds(new Set([noteId]));
@@ -586,7 +587,7 @@ export default function BoardPage() {
         alert("Image upload failed. Try again.");
       }
     },
-    [authorName, addNote]
+    [authorName, authorIconId, addNote]
   );
 
   useEffect(() => {

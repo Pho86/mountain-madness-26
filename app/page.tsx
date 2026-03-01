@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { FridgeLayout } from "@/components/FridgeLayout";
 import { JoinRoomForm } from "./JoinRoomForm";
 import { useAuth } from "@/lib/auth-context";
@@ -12,8 +14,9 @@ const LANDING_STICKY_TEXT =
 
 export default function Home() {
   const { user } = useAuth();
-  const { rooms, loading } = useUserRooms(user?.uid ?? null);
+  const { rooms, loading, removeRoom } = useUserRooms(user?.uid ?? null);
   const roomNames = useRoomNames(rooms);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const roomCode =
     typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID().slice(0, 8).toUpperCase()
@@ -61,20 +64,38 @@ export default function Home() {
               ) : (
                 <ul className="space-y-2">
                   {rooms.map((id) => (
-                    <li key={id}>
+                    <li
+                      key={id}
+                      className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 transition hover:border-zinc-300 hover:bg-zinc-100"
+                    >
                       <Link
                         href={`/board/${id}`}
-                        className="flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 transition hover:border-zinc-300 hover:bg-zinc-100"
+                        className="min-w-0 flex-1 px-4 py-3"
                       >
                         <span className="font-medium text-zinc-800">
                           {roomNames[id] && roomNames[id] !== id
                             ? roomNames[id]
                             : "Unnamed room"}
                         </span>
-                        <span className="font-mono text-xs text-zinc-400">
+                        <span className="ml-2 font-mono text-xs text-zinc-400">
                           {id}
                         </span>
                       </Link>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (removingId === id) return;
+                          setRemovingId(id);
+                          removeRoom(id).finally(() => setRemovingId(null));
+                        }}
+                        disabled={removingId === id}
+                        className="shrink-0 rounded p-2 text-zinc-400 hover:bg-zinc-200 hover:text-red-600 disabled:opacity-50"
+                        aria-label="Remove from room list"
+                        title="Remove from room list"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
                     </li>
                   ))}
                 </ul>
