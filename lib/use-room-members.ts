@@ -16,7 +16,7 @@ function memberRef(roomId: string, userId: string) {
   return doc(db, ROOMS, roomId, MEMBERS, userId);
 }
 
-export type RoomMember = { id: string; displayName: string };
+export type RoomMember = { id: string; displayName: string; iconId?: string | null };
 
 export function useRoomMembers(roomId: string | null) {
   const [members, setMembers] = useState<RoomMember[]>([]);
@@ -34,7 +34,8 @@ export function useRoomMembers(roomId: string | null) {
         const id = d.id;
         const displayName =
           (data?.displayName as string) || (data?.email as string) || "Someone";
-        if (id) list.push({ id, displayName });
+        const iconId = typeof data?.iconId === "string" ? data.iconId : null;
+        if (id) list.push({ id, displayName, iconId: iconId ?? undefined });
       });
       list.sort((a, b) => a.displayName.localeCompare(b.displayName));
       setMembers(list);
@@ -43,12 +44,20 @@ export function useRoomMembers(roomId: string | null) {
   }, [roomId]);
 
   const ensureCurrentUser = useCallback(
-    (user: User | null) => {
+    (user: User | null, iconId?: string | null) => {
       if (!roomId || !user) return;
       const ref = memberRef(roomId, user.uid);
       const displayName =
         user.displayName || user.email?.split("@")[0] || "Someone";
-      setDoc(ref, { displayName, email: user.email ?? null }, { merge: true });
+      setDoc(
+        ref,
+        {
+          displayName,
+          email: user.email ?? null,
+          ...(iconId != null && { iconId }),
+        },
+        { merge: true }
+      );
     },
     [roomId],
   );

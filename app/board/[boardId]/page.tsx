@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useBoardFirestore } from "@/lib/use-board-firestore";
 import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/lib/use-user-rooms";
+import { useUserProfile } from "@/lib/use-user-profile";
 import { Sticky, useAddSticky } from "@/components/Sticky";
 import { BoardToolbar } from "@/components/BoardToolbar";
 import { DeleteZone } from "@/components/DeleteZone";
@@ -35,7 +36,8 @@ export default function BoardPage() {
   const { notes, connected, addNote, updateNote, deleteNote } =
     useBoardFirestore(boardId);
   const authorName = user?.displayName || user?.email?.split("@")[0] || undefined;
-  const createSticky = useAddSticky(authorName);
+  const { iconId: authorIconId } = useUserProfile(user?.uid ?? null);
+  const createSticky = useAddSticky(authorName, authorIconId ?? undefined);
   const [tool, setTool] = useState<Tool>("cursor");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);

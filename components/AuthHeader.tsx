@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useUserProfile } from "@/lib/use-user-profile";
+import { getAvatarUrl } from "@/lib/avatars";
 
 function getRoomIdFromPath(pathname: string): string | null {
   const boardMatch = pathname.match(/^\/board\/([^/]+)/);
@@ -20,6 +22,7 @@ function getRoomIdFromPath(pathname: string): string | null {
 export function AuthHeader() {
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
+  const { iconId } = useUserProfile(user?.uid ?? null);
   const [signingOut, setSigningOut] = useState(false);
   const roomId = getRoomIdFromPath(pathname ?? "");
 
@@ -78,11 +81,23 @@ export function AuthHeader() {
           >
             Chores
           </Link>
+          <Link
+            href="/profile"
+            className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+          >
+            Profile
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           {user ? (
             <>
-              {user.photoURL ? (
+              {iconId ? (
+                <img
+                  src={getAvatarUrl(iconId)}
+                  alt=""
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : user.photoURL ? (
                 <img
                   src={user.photoURL}
                   alt=""

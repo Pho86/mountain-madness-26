@@ -37,6 +37,7 @@ function toDoc(note: StickyNote) {
     ...(note.listStyle != null && { listStyle: note.listStyle }),
     createdAt: note.createdAt,
     ...(note.authorName != null && { authorName: note.authorName }),
+    ...(note.authorIconId != null && { authorIconId: note.authorIconId }),
   };
 }
 
@@ -60,6 +61,7 @@ function fromDoc(data: {
   fontStyle?: "normal" | "italic";
   listStyle?: "none" | "bullet";
   authorName?: string;
+  authorIconId?: string;
 }): StickyNote {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
   return {
@@ -74,6 +76,7 @@ function fromDoc(data: {
     listStyle: data.listStyle ?? "none",
     createdAt: typeof created === "object" && created?.toMillis ? created.toMillis() : (created as number) ?? Date.now(),
     authorName: data.authorName,
+    authorIconId: data.authorIconId,
   };
 }
 
@@ -125,6 +128,7 @@ export function useBoardFirestore(boardId: string | null) {
         ...(note.fontStyle != null && { fontStyle: note.fontStyle }),
         ...(note.listStyle != null && { listStyle: note.listStyle }),
         ...(note.authorName != null && { authorName: note.authorName }),
+        ...(note.authorIconId != null && { authorIconId: note.authorIconId }),
       });
     },
     [boardId]

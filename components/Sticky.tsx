@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { StickyNote } from "@/lib/types";
+import { getAvatarUrl } from "@/lib/avatars";
 
 const COLORS = [
   { bg: "#ffffff", border: "#e5e5e5", label: "white" },
@@ -521,6 +522,13 @@ export function Sticky({
           )}
           {(note.authorName && (
             <div className="mt-auto flex items-center gap-1.5 text-xs text-zinc-600">
+              {note.authorIconId && (
+                <img
+                  src={getAvatarUrl(note.authorIconId)}
+                  alt=""
+                  className="h-5 w-5 shrink-0 rounded-full object-cover"
+                />
+              )}
               <span className="truncate font-medium" title={note.authorName}>
                 {note.authorName}
               </span>
@@ -532,7 +540,7 @@ export function Sticky({
   );
 }
 
-export function useAddSticky(authorName?: string) {
+export function useAddSticky(authorName?: string, authorIconId?: string) {
   return useCallback(
     (x: number, y: number) => {
       const note: StickyNote = {
@@ -544,9 +552,10 @@ export function useAddSticky(authorName?: string) {
         fontSize: 16,
         createdAt: Date.now(),
         authorName: authorName ?? undefined,
+        authorIconId: authorIconId ?? undefined,
       };
       return note;
     },
-    [authorName]
+    [authorName, authorIconId]
   );
 }
