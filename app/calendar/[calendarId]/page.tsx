@@ -8,7 +8,8 @@ import { useUserRooms } from "@/hooks/use-user-rooms";
 import { useRoom } from "@/hooks/use-room";
 import { BoardCalendar } from "@/components/BoardCalendar";
 import { CalendarPageSkeleton } from "@/components/CalendarPageSkeleton";
-import { RoomPageHeader } from "@/components/RoomPageHeader";
+import { EditableRoomName } from "@/components/EditableRoomName";
+import { FridgeLayout } from "@/components/FridgeLayout";
 
 export default function CalendarPage() {
   const params = useParams();
@@ -16,7 +17,7 @@ export default function CalendarPage() {
     typeof params.calendarId === "string" ? params.calendarId : null;
   const { user } = useAuth();
   const { addRoom } = useUserRooms(user?.uid ?? null);
-  const { name: roomName, ensureRoomExists, loading: roomLoading } = useRoom(calendarId);
+  const { name: roomName, setName: setRoomName, ensureRoomExists, loading: roomLoading } = useRoom(calendarId);
   const { events, connected, addEvent, deleteEvent, deleteOccurrence } =
     useCalendarFirestore(calendarId);
 
@@ -36,9 +37,11 @@ export default function CalendarPage() {
 
   if (!calendarId) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100">
-        <p className="text-zinc-500">Invalid calendar</p>
-      </div>
+      <FridgeLayout showJars>
+        <div className="flex min-h-full items-center justify-center">
+          <p className="text-zinc-500">Invalid calendar</p>
+        </div>
+      </FridgeLayout>
     );
   }
 
@@ -47,25 +50,41 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100 animate-fade-in">
-      <RoomPageHeader
-        left={`${roomName || calendarId}`}
-        roomCode={calendarId}
-      />
-
-      <main
-        className="flex-1 overflow-auto p-4"
-        style={{ minHeight: "calc(100vh - 56px)" }}
-      >
-        <BoardCalendar
-          calendarId={calendarId}
-          events={events}
-          connected={connected}
-          addEvent={addEvent}
-          deleteEvent={deleteEvent}
-          deleteOccurrence={deleteOccurrence}
-        />
-      </main>
-    </div>
+    <FridgeLayout showJars>
+      <div className="flex min-h-full flex-col overflow-auto">
+        {!roomLoading && calendarId && (
+          <div className="shrink-0 p-4 pr-6 pt-6 flex justify-end">
+            <div
+              className="rounded border-2 px-4 py-2 font-serif text-zinc-900"
+              style={{
+                backgroundColor: "var(--fridge-cream)",
+                borderColor: "#5c4033",
+              }}
+            >
+              <EditableRoomName
+                name={roomName || calendarId || "Calendar"}
+                roomCode={calendarId}
+                onSave={setRoomName}
+                hideCode={false}
+                loading={false}
+                className="flex flex-col items-end gap-0.5 font-serif text-right"
+                inputClassName="w-full min-w-0 border-0 border-b-2 border-zinc-600 bg-transparent py-0.5 text-right text-lg font-medium text-zinc-900 outline-none focus:ring-0 [background:transparent]"
+                compact
+              />
+            </div>
+          </div>
+        )}
+        <main className="flex-1 overflow-auto p-4" style={{ minHeight: 0 }}>
+          <BoardCalendar
+            calendarId={calendarId}
+            events={events}
+            connected={connected}
+            addEvent={addEvent}
+            deleteEvent={deleteEvent}
+            deleteOccurrence={deleteOccurrence}
+          />
+        </main>
+      </div>
+    </FridgeLayout>
   );
 }

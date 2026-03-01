@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useUserProfile } from "@/lib/use-user-profile";
 import { AVATAR_IDS, getAvatarUrl } from "@/lib/avatars";
+import { FridgeLayout } from "@/components/FridgeLayout";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -28,15 +29,18 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100">
-        <p className="text-zinc-500">Loading…</p>
-      </div>
+      <FridgeLayout showJars>
+        <div className="flex min-h-full items-center justify-center">
+          <p className="text-zinc-500">Loading…</p>
+        </div>
+      </FridgeLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-100 px-4 py-10">
-      <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6">
+    <FridgeLayout showJars>
+      <div className="flex min-h-full flex-col items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
         <h1 className="mb-2 text-center text-xl font-semibold text-zinc-900">
           {needsAvatar ? "Choose your avatar" : "Profile"}
         </h1>
@@ -93,6 +97,7 @@ export default function ProfilePage() {
           </Link>
         </div>
       </div>
-    </div>
+      </div>
+    </FridgeLayout>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FridgeLayout } from "@/components/FridgeLayout";
 import { JoinChoresForm } from "./JoinChoresForm";
 
 export default function ChoresLandingPage() {
@@ -7,8 +8,9 @@ export default function ChoresLandingPage() {
     : "demo-chores";
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-zinc-100 px-4">
-      <div className="max-w-md text-center">
+    <FridgeLayout showJars>
+      <div className="flex min-h-full flex-col items-center justify-center gap-8 px-4 py-10">
+        <div className="max-w-md text-center">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
           Shared chores
         </h1>
@@ -26,9 +28,10 @@ export default function ChoresLandingPage() {
         </Link>
         <JoinChoresForm />
       </div>
-      <p className="text-sm text-zinc-500">
-        Real-time shared chores · Due soon & overdue reminders
-      </p>
-    </div>
+        <p className="text-sm text-zinc-500">
+          Real-time shared chores · Due soon & overdue reminders
+        </p>
+      </div>
+    </FridgeLayout>
   );
 }

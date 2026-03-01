@@ -1,9 +1,11 @@
 "use client";
 
+import { FridgeLayout } from "@/components/FridgeLayout";
+
 export function ChoresPageSkeleton() {
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100">
-      <main className="flex-1 overflow-auto p-4">
+    <FridgeLayout showJars>
+      <div className="flex min-h-full flex-col overflow-auto p-4">
         <div className="mx-auto max-w-2xl space-y-6">
           <section className="rounded-xl border border-zinc-200 bg-white p-4">
             <div className="mb-3 h-4 w-28 animate-skeleton-pulse rounded bg-zinc-200" />
@@ -34,7 +36,7 @@ export function ChoresPageSkeleton() {
             </ul>
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </FridgeLayout>
   );
 }

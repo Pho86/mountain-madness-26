@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FridgeLayout } from "@/components/FridgeLayout";
 import { JoinRoomForm } from "./JoinRoomForm";
 import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/hooks/use-user-rooms";
@@ -16,13 +17,14 @@ export default function Home() {
       : "ABCD1234";
 
   return (
-    <div className="flex h-screen flex-col items-center justify-center overflow-hidden bg-zinc-100 px-4">
-      <div className="flex w-full max-w-md max-h-full flex-col items-center gap-6 overflow-auto py-6">
+    <FridgeLayout showJars>
+      <div className="flex h-full flex-col items-center justify-center overflow-auto px-4 py-6">
+        <div className="flex w-full max-w-md flex-col items-center gap-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+          <h1 className="text-3xl font-bold tracking-tight text-text-on-red">
             Waifu Fridge
           </h1>
-          <p className="mt-2 text-zinc-600">
+          <p className="mt-2 text-text-on-red-muted">
             Share one room for sticky notes and budget tracker. Enter a room code
             to join, or create a new room and share the code.
           </p>
@@ -69,9 +71,9 @@ export default function Home() {
         <section className="flex flex-col gap-4">
           <JoinRoomForm />
           <div className="relative flex items-center gap-3">
-            <div className="flex-1 border-t border-zinc-300" />
-            <span className="text-sm text-zinc-500">or</span>
-            <div className="flex-1 border-t border-zinc-300" />
+            <div className="flex-1 border-t border-white/40" />
+            <span className="text-sm text-text-on-red-muted">or</span>
+            <div className="flex-1 border-t border-white/40" />
           </div>
           <Link
             href={`/board/${roomCode}`}
@@ -82,10 +84,11 @@ export default function Home() {
         </section>
         </div>
 
-        <p className="text-center text-sm text-zinc-500">
+        <p className="text-center text-sm text-text-on-red-muted">
           Same room code opens stickies and budget · Real-time with Firebase
         </p>
+        </div>
       </div>
-    </div>
+    </FridgeLayout>
   );
 }

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { useBoardFirestore } from "@/hooks/use-board-firestore";
 import { useBoardCursors } from "@/hooks/use-board-cursors";
 import { upload } from "@vercel/blob/client";
@@ -14,7 +13,7 @@ import { Sticky, useAddSticky } from "@/components/Sticky";
 import { BoardToolbar } from "@/components/BoardToolbar";
 import { DeleteZone } from "@/components/DeleteZone";
 import { EditableRoomName } from "@/components/EditableRoomName";
-import { RoomPageHeader } from "@/components/RoomPageHeader";
+import { FridgeLayout } from "@/components/FridgeLayout";
 import { BoardPageSkeleton } from "@/components/BoardPageSkeleton";
 import { useRoom } from "@/hooks/use-room";
 import type { StickyNote } from "@/lib/types";
@@ -34,7 +33,7 @@ function roundPosition(v: number) {
 export default function BoardPage() {
   const params = useParams();
   const boardId = typeof params.boardId === "string" ? params.boardId : null;
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { addRoom } = useUserRooms(user?.uid ?? null);
   const { name: roomName, setName: setRoomName, ensureRoomExists, loading: roomLoading } = useRoom(boardId);
   const { notes, connected, addNote, updateNote, deleteNote } =
@@ -636,128 +635,21 @@ export default function BoardPage() {
 
   if (!boardId) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100">
-        <p className="text-zinc-500">Invalid board</p>
-      </div>
+      <FridgeLayout showJars>
+        <div className="flex min-h-full items-center justify-center">
+          <p className="text-zinc-500">Invalid board</p>
+        </div>
+      </FridgeLayout>
     );
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-fridge-outer animate-fade-in">
-      {/* Room name/code live on the fridge plaque below */}
-
-      {/* Shelf on top of the fridge: knob + jars + sign out */}
+    <FridgeLayout showJars>
       <div
-        className="flex shrink-0 flex-wrap items-end gap-4 bg-fridge-cream mx-12"
-        style={{ minHeight: "72px" }}
-        aria-label="Top of fridge"
-      >
-        <img
-          src="/fridge/Knob.png"
-          alt=""
-          className="h-8 w-auto object-contain"
-          aria-hidden
-        />
-        {[
-          {
-            slug: "notes",
-            label: "NOTES",
-            bodyColor: "#D43E3E",
-            labelBg: "#9B5573",
-            labelBorder: "#7A4463",
-            labelText: "#E9D7C5",
-          },
-          {
-            slug: "calendar",
-            label: "CALENDAR",
-            bodyColor: "#E7A24B",
-            labelBg: "#E9D7C5",
-            labelBorder: "#7088B4",
-            labelText: "#4D6A9E",
-          },
-          {
-            slug: "chores",
-            label: "CHORES",
-            bodyColor: "#707EA7",
-            labelBg: "#D43E3E",
-            labelBorder: "#A63030",
-            labelText: "#E9D7C5",
-          },
-          {
-            slug: "budget",
-            label: "BUDGET",
-            bodyColor: "#C8A2D3",
-            labelBg: "#9B5573",
-            labelBorder: "#7A4463",
-            labelText: "#E9D7C5",
-          },
-          {
-            slug: "profile",
-            label: "PROFILE",
-            bodyColor: "#E7A24B",
-            labelBg: "#4D6A9E",
-            labelBorder: "#7088B4",
-            labelText: "#E9D7C5",
-          },
-        ].map(({ slug, label, bodyColor, labelBg, labelBorder, labelText }) => {
-          const href = slug === "notes" ? `/board/${boardId}` : `/${slug}`;
-          return (
-            <Link
-              key={slug}
-              href={href}
-              className="relative flex w-20 shrink-0 flex-col items-center transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fridge-cream focus:ring-offset-fridge-outer"
-              aria-label={label}
-            >
-              <div
-                className="relative h-10 w-full mt-3 rounded-b rounded-t-sm pt-2"
-                style={{ backgroundColor: bodyColor }}
-              >
-                <span
-                  className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase"
-                  style={{
-                    backgroundColor: labelBg,
-                    borderColor: labelBorder,
-                    color: labelText,
-                    textShadow: "0 0 1px rgba(0,0,0,0.2)",
-                  }}
-                >
-                  {label}
-                </span>
-              </div>
-              <img
-                src={`/jars/${slug}-jar-lid.svg`}
-                alt=""
-                className="absolute left-0 top-0 z-10 h-6 w-full object-contain object-center"
-                aria-hidden
-              />
-            </Link>
-          );
-        })}
-        <div className="ml-auto flex items-end gap-2">
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="relative flex h-14 min-w-40 items-center justify-center overflow-hidden bg-transparent transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-700 focus:ring-offset-2 focus:ring-offset-fridge-cream"
-            style={{
-              backgroundImage: "url(/jars/signout-pot.svg)",
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center",
-            }}
-            aria-label="Sign out"
-          >
-            <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white drop-shadow-md">
-              Sign out
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <main
         ref={mainRef}
-        className="relative flex-1 overflow-hidden bg-fridge-canvas"
+        className="relative flex-1 overflow-hidden bg-fridge-canvas min-h-full"
         style={{
-          minHeight: "calc(100vh - 56px)",
+          minHeight: "calc(100vh - 72px)",
           cursor: roomLoading ? "default" : isPanning ? "grabbing" : tool === "sticky" ? "crosshair" : tool === "move" ? "grab" : "default",
         }}
         onClick={roomLoading ? undefined : handleBoardClick}
@@ -888,7 +780,7 @@ export default function BoardPage() {
           ))}
         </div>
         )}
-      </main>
+      </div>
 
       {selectionBox && (
         <div
@@ -940,6 +832,6 @@ export default function BoardPage() {
           </div>
         )}
       </div>
-    </div>
+    </FridgeLayout>
   );
 }

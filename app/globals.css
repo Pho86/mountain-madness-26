@@ -3,6 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* High-contrast text when background is red or dark */
+  --text-on-red: #ffffff;
+  --text-on-red-muted: #fef3c7;
   --fridge-cream: #FBE8D2;
   --fridge-outer: #FBE8D2;
 }
@@ -12,6 +15,8 @@
   --color-foreground: var(--foreground);
   --color-fridge-cream: var(--fridge-cream);
   --color-fridge-outer: var(--fridge-outer);
+  --color-text-on-red: var(--text-on-red);
+  --color-text-on-red-muted: var(--text-on-red-muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -19,7 +24,7 @@
 body {
   background-color: var(--fridge-cream);
   min-height: 100vh;
-  color: var(--foreground);
+  color: var(--text-on-red);
   font-family: Arial, Helvetica, sans-serif;
 }
 

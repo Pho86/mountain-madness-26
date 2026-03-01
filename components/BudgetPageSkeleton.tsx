@@ -1,11 +1,11 @@
 "use client";
 
+import { FridgeLayout } from "@/components/FridgeLayout";
+
 export function BudgetPageSkeleton() {
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100">
-      {/* No header skeleton - navbar is shown by layout */}
-
-      <main className="flex-1 overflow-auto p-4">
+    <FridgeLayout showJars>
+      <div className="flex min-h-full flex-col overflow-auto p-4">
         <div className="mx-auto max-w-2xl space-y-6">
           <section className="rounded-xl border border-zinc-200 bg-white p-4">
             <div className="h-4 w-20 animate-skeleton-pulse rounded bg-zinc-200" />
@@ -47,7 +47,7 @@ export function BudgetPageSkeleton() {
             </ul>
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </FridgeLayout>
   );
 }
