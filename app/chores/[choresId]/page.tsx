@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useChoresFirestore } from "@/lib/use-chores-firestore";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { useChoresFirestore } from "@/hooks/use-chores-firestore";
 import { useAuth } from "@/lib/auth-context";
-import { useUserRooms } from "@/lib/use-user-rooms";
-import { useRoom } from "@/lib/use-room";
-import { useRoomMembers } from "@/lib/use-room-members";
+import { useUserRooms } from "@/hooks/use-user-rooms";
+import { useRoom } from "@/hooks/use-room";
+import { useRoomMembers } from "@/hooks/use-room-members";
 import { ChoresPageSkeleton } from "@/components/ChoresPageSkeleton";
 import { RoomPageHeader } from "@/components/RoomPageHeader";
 import type { Chore } from "@/lib/types";
@@ -244,19 +245,7 @@ export default function ChoresPage() {
                           title="Remove task"
                           aria-label="Remove task"
                         >
-                          <svg
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
+                          <TrashIcon className="h-4 w-4" />
                         </button>
                       </div>
                     </li>

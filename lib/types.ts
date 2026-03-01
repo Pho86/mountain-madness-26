@@ -4,6 +4,10 @@ export type StickyNote = {
   y: number;
   text: string;
   color: string;
+  /** Optional image URL (e.g. from Firebase Storage); when set, shown as sticker */
+  imageUrl?: string;
+  /** Uniform scale for image sticker (1 = 100%); only used when imageUrl is set */
+  imageScale?: number;
   /** Font size in pixels (e.g. 16). Presets: Small=12, Medium=16, Large=20 */
   fontSize?: number;
   fontWeight?: "normal" | "bold";

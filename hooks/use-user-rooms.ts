@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { doc, onSnapshot, setDoc, arrayUnion } from "firebase/firestore";
+import { arrayUnion, doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const USERS = "users";

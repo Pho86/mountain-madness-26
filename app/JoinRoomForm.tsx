@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { checkRoomExists } from "@/lib/use-room";
+import { checkRoomExists } from "@/hooks/use-room";
 
 export function JoinRoomForm() {
   const router = useRouter();

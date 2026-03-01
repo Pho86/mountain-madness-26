@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   setDoc,
-  updateDoc,
-  deleteDoc,
   serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Chore } from "@/lib/types";
@@ -35,6 +35,14 @@ function toDoc(chore: Chore) {
   };
 }
 
+type TimestampLike = { toMillis?: () => number } | number | null;
+
+function fromMillis(v: unknown): number {
+  const t = v as TimestampLike;
+  if (typeof t === "object" && t?.toMillis) return t.toMillis();
+  return (t as number) ?? Date.now();
+}
+
 function fromDoc(data: {
   id: string;
   title: string;
@@ -43,8 +51,6 @@ function fromDoc(data: {
   lastDoneAt: unknown;
   createdAt: unknown;
 }): Chore {
-  const created = data.createdAt as { toMillis?: () => number } | number | null;
-  const lastDone = data.lastDoneAt as { toMillis?: () => number } | number | null | undefined;
   return {
     id: data.id,
     title: data.title ?? "",
@@ -54,15 +60,8 @@ function fromDoc(data: {
         ? data.frequencyDays
         : 7,
     lastDoneAt:
-      lastDone == null
-        ? null
-        : typeof lastDone === "object" && (lastDone as { toMillis?: () => number })?.toMillis
-          ? (lastDone as { toMillis: () => number }).toMillis()
-          : (lastDone as number),
-    createdAt:
-      typeof created === "object" && (created as { toMillis?: () => number })?.toMillis
-        ? (created as { toMillis: () => number }).toMillis()
-        : ((created as number) ?? Date.now()),
+      data.lastDoneAt == null ? null : fromMillis(data.lastDoneAt),
+    createdAt: fromMillis(data.createdAt),
   };
 }
 
@@ -85,7 +84,7 @@ export function useChoresFirestore(choresId: string | null) {
         list.sort((a, b) => a.createdAt - b.createdAt);
         setChores(list);
       },
-      () => setConnected(false),
+      () => setConnected(false)
     );
     return () => {
       unsub();
@@ -98,7 +97,7 @@ export function useChoresFirestore(choresId: string | null) {
       if (!choresId) return;
       setDoc(taskRef(choresId, chore.id), toDoc(chore));
     },
-    [choresId],
+    [choresId]
   );
 
   const markDone = useCallback(
@@ -106,7 +105,7 @@ export function useChoresFirestore(choresId: string | null) {
       if (!choresId) return;
       updateDoc(taskRef(choresId, id), { lastDoneAt: serverTimestamp() });
     },
-    [choresId],
+    [choresId]
   );
 
   const deleteChore = useCallback(
@@ -114,7 +113,7 @@ export function useChoresFirestore(choresId: string | null) {
       if (!choresId) return;
       deleteDoc(taskRef(choresId, id));
     },
-    [choresId],
+    [choresId]
   );
 
   return { chores, connected, addChore, markDone, deleteChore };

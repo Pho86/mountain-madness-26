@@ -20,10 +20,10 @@ export function useRoomNames(roomIds: string[]) {
         ref,
         (snapshot) => {
           const data = snapshot.data();
-            setNames((prev) => ({
-              ...prev,
-              [id]: (data?.name as string) ?? id,
-            }));
+          setNames((prev) => ({
+            ...prev,
+            [id]: (data?.name as string) ?? id,
+          }));
         },
         () => {
           setNames((prev) => ({ ...prev, [id]: id }));

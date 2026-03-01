@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   setDoc,
   updateDoc,
-  deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { StickyNote } from "@/lib/types";
 
-const NOTES = "notes";
 const BOARDS = "boards";
+const NOTES = "notes";
 
 function notesRef(boardId: string) {
   return collection(db, BOARDS, boardId, NOTES);
@@ -31,6 +31,8 @@ function toDoc(note: StickyNote) {
     y: note.y,
     text: note.text,
     color: note.color,
+    ...(note.imageUrl != null && { imageUrl: note.imageUrl }),
+    ...(note.imageScale != null && { imageScale: note.imageScale }),
     ...(note.fontSize != null && { fontSize: note.fontSize }),
     ...(note.fontWeight != null && { fontWeight: note.fontWeight }),
     ...(note.fontStyle != null && { fontStyle: note.fontStyle }),
@@ -55,6 +57,8 @@ function fromDoc(data: {
   text: string;
   color: string;
   createdAt: unknown;
+  imageUrl?: string;
+  imageScale?: number;
   fontSize?: number | "sm" | "base" | "lg";
   fontWeight?: "normal" | "bold";
   fontStyle?: "normal" | "italic";
@@ -62,17 +66,25 @@ function fromDoc(data: {
   authorName?: string;
 }): StickyNote {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
+  const createdAt =
+    typeof created === "object" && created?.toMillis
+      ? created.toMillis()
+      : (created as number) ?? Date.now();
   return {
     id: data.id,
     x: data.x,
     y: data.y,
     text: data.text ?? "",
     color: data.color ?? "#fef08a",
+    imageUrl: data.imageUrl,
+    imageScale: typeof data.imageScale === "number" && data.imageScale >= 0.25 && data.imageScale <= 4
+      ? data.imageScale
+      : undefined,
     fontSize: normalizeFontSize(data.fontSize),
     fontWeight: data.fontWeight ?? "normal",
     fontStyle: data.fontStyle ?? "normal",
     listStyle: data.listStyle ?? "none",
-    createdAt: typeof created === "object" && created?.toMillis ? created.toMillis() : (created as number) ?? Date.now(),
+    createdAt,
     authorName: data.authorName,
   };
 }
@@ -120,6 +132,8 @@ export function useBoardFirestore(boardId: string | null) {
         y: note.y,
         text: note.text,
         color: note.color,
+        ...(note.imageUrl != null && { imageUrl: note.imageUrl }),
+        ...(note.imageScale != null && { imageScale: note.imageScale }),
         ...(note.fontSize != null && { fontSize: note.fontSize }),
         ...(note.fontWeight != null && { fontWeight: note.fontWeight }),
         ...(note.fontStyle != null && { fontStyle: note.fontStyle }),

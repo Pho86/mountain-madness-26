@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   setDoc,
-  deleteDoc,
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { CalendarEvent } from "@/lib/types";
 
-const EVENTS = "events";
 const CALENDARS = "calendars";
+const EVENTS = "events";
 
 function eventsRef(calendarId: string) {
   return collection(db, CALENDARS, calendarId, EVENTS);
@@ -45,6 +45,10 @@ function fromDoc(data: {
   createdAt: unknown;
 }): CalendarEvent {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
+  const createdAt =
+    typeof created === "object" && created?.toMillis
+      ? created.toMillis()
+      : (created as number) ?? Date.now();
   return {
     id: data.id,
     title: data.title ?? "",
@@ -52,10 +56,7 @@ function fromDoc(data: {
     time: data.time ?? null,
     recurring: data.recurring ?? "none",
     exceptionDates: data.exceptionDates ?? [],
-    createdAt:
-      typeof created === "object" && created?.toMillis
-        ? created.toMillis()
-        : ((created as number) ?? Date.now()),
+    createdAt,
   };
 }
 
@@ -78,7 +79,7 @@ export function useCalendarFirestore(calendarId: string | null) {
         list.sort((a, b) => a.createdAt - b.createdAt);
         setEvents(list);
       },
-      () => setConnected(false),
+      () => setConnected(false)
     );
     return () => {
       unsub();
@@ -91,7 +92,7 @@ export function useCalendarFirestore(calendarId: string | null) {
       if (!calendarId) return;
       setDoc(eventRef(calendarId, event.id), toDoc(event));
     },
-    [calendarId],
+    [calendarId]
   );
 
   const deleteEvent = useCallback(
@@ -99,7 +100,7 @@ export function useCalendarFirestore(calendarId: string | null) {
       if (!calendarId) return;
       deleteDoc(eventRef(calendarId, id));
     },
-    [calendarId],
+    [calendarId]
   );
 
   const deleteOccurrence = useCallback(
@@ -110,7 +111,7 @@ export function useCalendarFirestore(calendarId: string | null) {
       const next = [...(event.exceptionDates ?? []), date];
       updateDoc(eventRef(calendarId, eventId), { exceptionDates: next });
     },
-    [calendarId, events],
+    [calendarId, events]
   );
 
   return { events, connected, addEvent, deleteEvent, deleteOccurrence };

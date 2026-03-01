@@ -1,16 +1,18 @@
 "use client";
 
-import { CursorArrowRippleIcon, HandRaisedIcon } from "@heroicons/react/24/outline";
+import { CursorArrowRippleIcon, DocumentTextIcon, HandRaisedIcon, PhotoIcon } from "@heroicons/react/24/outline";
 
 type Tool = "cursor" | "move" | "sticky";
 
 export function BoardToolbar({
   tool,
   onToolChange,
+  onAddImageClick,
   className = "",
 }: {
   tool: Tool;
   onToolChange: (t: Tool) => void;
+  onAddImageClick?: () => void;
   className?: string;
 }) {
   return (
@@ -54,17 +56,21 @@ export function BoardToolbar({
         title="Sticky note (click to add)"
         aria-pressed={tool === "sticky"}
       >
-        <StickyIcon className="h-5 w-5 shrink-0" />
+        <DocumentTextIcon className="h-5 w-5 shrink-0" />
         <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium transition-[max-width] duration-200 group-hover:max-w-[4rem]">Sticky</span>
       </button>
+      {onAddImageClick && (
+        <button
+          type="button"
+          onClick={onAddImageClick}
+          className="group flex items-center gap-1.5 rounded-md px-3 py-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
+          title="Upload image as sticker"
+          aria-label="Upload image as sticker"
+        >
+          <PhotoIcon className="h-5 w-5 shrink-0" />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium transition-[max-width] duration-200 group-hover:max-w-16">Image</span>
+        </button>
+      )}
     </div>
-  );
-}
-
-function StickyIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
   );
 }

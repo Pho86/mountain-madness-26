@@ -3,16 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
-import { useBoardFirestore } from "@/lib/use-board-firestore";
+import { useBoardFirestore } from "@/hooks/use-board-firestore";
+import { useBoardCursors } from "@/hooks/use-board-cursors";
+import { upload } from "@vercel/blob/client";
 import { useAuth } from "@/lib/auth-context";
-import { useUserRooms } from "@/lib/use-user-rooms";
+import { useUserRooms } from "@/hooks/use-user-rooms";
 import { Sticky, useAddSticky } from "@/components/Sticky";
 import { BoardToolbar } from "@/components/BoardToolbar";
 import { DeleteZone } from "@/components/DeleteZone";
 import { EditableRoomName } from "@/components/EditableRoomName";
 import { RoomPageHeader } from "@/components/RoomPageHeader";
 import { BoardPageSkeleton } from "@/components/BoardPageSkeleton";
-import { useRoom } from "@/lib/use-room";
+import { useRoom } from "@/hooks/use-room";
 import type { StickyNote } from "@/lib/types";
 
 type Tool = "cursor" | "move" | "sticky";
@@ -37,6 +39,11 @@ export default function BoardPage() {
     useBoardFirestore(boardId);
   const authorName = user?.displayName || user?.email?.split("@")[0] || undefined;
   const createSticky = useAddSticky(authorName);
+  const { otherCursors, setMyCursor } = useBoardCursors(
+    boardId,
+    user?.uid ?? null,
+    authorName
+  );
   const [tool, setTool] = useState<Tool>("cursor");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
@@ -72,6 +79,8 @@ export default function BoardPage() {
   const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
   const selectionBoxShiftRef = useRef(false);
   const selectionBoxRef = useRef<SelectionBox | null>(null);
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const noteIds = new Set(notes.map((n) => n.id));
   const displayNotes = [...notes, ...pendingNotes.filter((p) => !noteIds.has(p.id))];
@@ -154,6 +163,12 @@ export default function BoardPage() {
     (e: React.PointerEvent<HTMLDivElement>) => {
       const main = mainRef.current;
       const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
+      if (main) {
+        const rect = main.getBoundingClientRect();
+        const contentX = (e.clientX - rect.left - currentPan.x) / currentZoom;
+        const contentY = (e.clientY - rect.top - currentPan.y) / currentZoom;
+        setMyCursor(contentX, contentY);
+      }
       if (selectionBox !== null) {
         setSelectionBox((prev) => {
           const next = prev ? { ...prev, endX: e.clientX, endY: e.clientY } : null;
@@ -183,7 +198,7 @@ export default function BoardPage() {
         y: start.panY + (e.clientY - start.clientY),
       });
     },
-    [pendingNewNoteDrag, selectionBox]
+    [pendingNewNoteDrag, selectionBox, setMyCursor]
   );
 
   const handlePointerUp = useCallback(
@@ -342,19 +357,24 @@ export default function BoardPage() {
     setDragOverDeleteZone(isPointInRect(clientX, clientY, zone.getBoundingClientRect()));
   }, []);
 
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedNoteIds.size === 0) return;
+    selectedNoteIds.forEach((id) => deleteNote(id));
+    setSelectedNoteIds(new Set());
+    setPrimarySelectedId(null);
+  }, [selectedNoteIds, deleteNote]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Delete" && e.key !== "Backspace") return;
       if ((e.target as HTMLElement).closest("textarea, input")) return;
       if (selectedNoteIds.size === 0) return;
       e.preventDefault();
-      selectedNoteIds.forEach((id) => deleteNote(id));
-      setSelectedNoteIds(new Set());
-      setPrimarySelectedId(null);
+      handleDeleteSelected();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedNoteIds, deleteNote]);
+  }, [handleDeleteSelected]);
 
   useEffect(() => {
     if (primarySelectedId && !selectedNoteIds.has(primarySelectedId)) {
@@ -444,6 +464,49 @@ export default function BoardPage() {
       setSelectedNoteIds(new Set([noteId]));
     }
   }, []);
+
+  const handleAddImageClick = useCallback(() => {
+    imageInputRef.current?.click();
+  }, []);
+
+  const handleImageUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file || !mainRef.current) return;
+      const rect = mainRef.current.getBoundingClientRect();
+      const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
+      const contentCenterX = (rect.width / 2 - currentPan.x) / currentZoom;
+      const contentCenterY = (rect.height / 2 - currentPan.y) / currentZoom;
+      try {
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/board-image",
+        });
+        const noteId = crypto.randomUUID();
+        const x = roundPosition(contentCenterX - 112);
+        const y = roundPosition(contentCenterY - 100);
+        const note: StickyNote = {
+          id: noteId,
+          x,
+          y,
+          text: "",
+          color: "#f5f5f5",
+          imageUrl: blob.url,
+          createdAt: Date.now(),
+          authorName: authorName ?? undefined,
+        };
+        addNote(note);
+        setSelectedNoteIds(new Set([noteId]));
+        setPrimarySelectedId(noteId);
+        setFrontNoteIds((prev) => [...prev.filter((id) => id !== noteId), noteId]);
+      } catch (err) {
+        console.error("Image upload failed:", err);
+        alert("Image upload failed. Try again.");
+      }
+    },
+    [authorName, addNote]
+  );
 
   useEffect(() => {
     if (user && boardId) addRoom(boardId);
@@ -597,11 +660,18 @@ export default function BoardPage() {
           <div className="absolute inset-0" />
           {displayNotes.map((note) => {
             const opt = optimisticPosition[note.id];
+            const noteX = opt?.x ?? note.x;
+            const noteY = opt?.y ?? note.y;
             const noteZIndex = frontNoteIds.includes(note.id)
               ? 10 + frontNoteIds.indexOf(note.id)
               : 1;
             return (
-              <div key={note.id} data-sticky>
+              <div
+                key={note.id}
+                data-sticky
+                className="absolute"
+                style={{ left: noteX, top: noteY, zIndex: noteZIndex }}
+              >
                 <Sticky
                   note={note}
                   onUpdate={handleUpdate}
@@ -610,18 +680,42 @@ export default function BoardPage() {
                   onSelect={handleSelect}
                   isDragging={draggingId === note.id}
                   isSelected={selectedNoteIds.has(note.id)}
-                  showToolbar={selectedNoteIds.has(note.id) && (selectedNoteIds.size <= 1 || note.id === primarySelectedId)}
+                  showToolbar={selectedNoteIds.has(note.id) && !note.imageUrl && (selectedNoteIds.size <= 1 || note.id === primarySelectedId)}
                   autoFocusEdit={lastCreatedNoteId === note.id}
                   onEditEnd={handleEditEnd}
                   onSaveNote={updateNote}
                   onToolbarPatch={selectedNoteIds.size > 0 ? handleToolbarPatch : undefined}
-                  displayX={opt?.x}
-                  displayY={opt?.y}
+                  onDelete={handleDeleteSelected}
+                  dragPosition={{ x: noteX, y: noteY }}
+                  zoom={zoom}
+                  displayX={0}
+                  displayY={0}
                   zIndex={noteZIndex}
                 />
               </div>
             );
           })}
+          {otherCursors.map((c) => (
+            <div
+              key={c.userId}
+              className="pointer-events-none absolute z-20 flex items-center gap-1"
+              style={{ left: c.x, top: c.y, transform: "translate(0, -4px)" }}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-6 w-6 text-blue-600 drop-shadow-sm"
+                aria-hidden
+              >
+                <path d="M4 4l7.5 15 2.5-5.5L22 10 4 4zm2.5 3.8l9.2 3.8-5.9 5.9L6.5 7.8z" />
+              </svg>
+              <span className="rounded bg-blue-600 px-2 py-0.5 text-xs font-medium text-white shadow-sm whitespace-nowrap">
+                {c.displayName}
+              </span>
+            </div>
+          ))}
         </div>
         )}
       </main>
@@ -659,9 +753,18 @@ export default function BoardPage() {
           </div>
         ) : (
           <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-zinc-200 bg-white px-3 py-2 shadow-sm">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              aria-hidden
+              onChange={handleImageUpload}
+            />
             <BoardToolbar
               tool={tool}
               onToolChange={setTool}
+              onAddImageClick={handleAddImageClick}
               className="border-0 bg-transparent p-0"
             />
           </div>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { collection, doc, onSnapshot, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import type { User } from "firebase/auth";
+import { db } from "@/lib/firebase";
 
-const ROOMS = "rooms";
 const MEMBERS = "members";
+const ROOMS = "rooms";
 
 function membersRef(roomId: string) {
   return collection(db, ROOMS, roomId, MEMBERS);
@@ -33,7 +33,9 @@ export function useRoomMembers(roomId: string | null) {
         const data = d.data();
         const id = d.id;
         const displayName =
-          (data?.displayName as string) || (data?.email as string) || "Someone";
+          (data?.displayName as string) ||
+          (data?.email as string) ||
+          "Someone";
         if (id) list.push({ id, displayName });
       });
       list.sort((a, b) => a.displayName.localeCompare(b.displayName));
@@ -50,7 +52,7 @@ export function useRoomMembers(roomId: string | null) {
         user.displayName || user.email?.split("@")[0] || "Someone";
       setDoc(ref, { displayName, email: user.email ?? null }, { merge: true });
     },
-    [roomId],
+    [roomId]
   );
 
   return { members, ensureCurrentUser };

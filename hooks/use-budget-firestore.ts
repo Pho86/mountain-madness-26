@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   setDoc,
-  deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Expense } from "@/lib/types";
 
-const EXPENSES = "expenses";
 const BUDGETS = "budgets";
+const EXPENSES = "expenses";
 
 function expensesRef(budgetId: string) {
   return collection(db, BUDGETS, budgetId, EXPENSES);
@@ -42,6 +42,10 @@ function fromDoc(data: {
   createdAt: unknown;
 }): Expense {
   const created = data.createdAt as { toMillis?: () => number } | number | null;
+  const createdAt =
+    typeof created === "object" && created?.toMillis
+      ? created.toMillis()
+      : (created as number) ?? Date.now();
   return {
     id: data.id,
     description: data.description ?? "",
@@ -51,10 +55,7 @@ function fromDoc(data: {
       typeof data.splitCount === "number" && data.splitCount > 0
         ? data.splitCount
         : 1,
-    createdAt:
-      typeof created === "object" && created?.toMillis
-        ? created.toMillis()
-        : ((created as number) ?? Date.now()),
+    createdAt,
   };
 }
 
@@ -77,7 +78,7 @@ export function useBudgetFirestore(budgetId: string | null) {
         list.sort((a, b) => b.createdAt - a.createdAt);
         setExpenses(list);
       },
-      () => setConnected(false),
+      () => setConnected(false)
     );
     return () => {
       unsub();
@@ -90,7 +91,7 @@ export function useBudgetFirestore(budgetId: string | null) {
       if (!budgetId) return;
       setDoc(expenseRef(budgetId, expense.id), toDoc(expense));
     },
-    [budgetId],
+    [budgetId]
   );
 
   const deleteExpense = useCallback(
@@ -98,7 +99,7 @@ export function useBudgetFirestore(budgetId: string | null) {
       if (!budgetId) return;
       deleteDoc(expenseRef(budgetId, id));
     },
-    [budgetId],
+    [budgetId]
   );
 
   return { expenses, connected, addExpense, deleteExpense };

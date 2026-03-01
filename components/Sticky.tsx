@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDownIcon, ListBulletIcon, TrashIcon } from "@heroicons/react/24/outline";
 import type { StickyNote } from "@/lib/types";
 
 const COLORS = [
@@ -23,6 +24,12 @@ const FONT_SIZE_PRESETS = [
 ];
 
 const DEFAULT_FONT_SIZE = 16;
+const IMAGE_BASE_W = 224;
+const IMAGE_BASE_H = 200;
+const IMAGE_SCALE_MIN = 0.25;
+const IMAGE_SCALE_MAX = 3;
+/** 0–1: how much pointer distance change affects scale (lower = slower resize) */
+const RESIZE_SENSITIVITY = 0.35;
 
 function randomColor() {
   const c = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -38,11 +45,13 @@ function StickyToolbar({
   note,
   onUpdate,
   onPointerDown,
+  onDelete,
   visible,
 }: {
   note: StickyNote;
   onUpdate: (patch: Partial<StickyNote>) => void;
   onPointerDown: (e: React.PointerEvent) => void;
+  onDelete?: () => void;
   visible: boolean;
 }) {
   const [colorOpen, setColorOpen] = useState(false);
@@ -97,9 +106,7 @@ function StickyToolbar({
             className="h-4 w-4 rounded-full border border-white/20"
             style={{ backgroundColor: note.color }}
           />
-          <svg className="h-3.5 w-3.5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <ChevronDownIcon className="h-3.5 w-3.5 text-white/70" />
         </button>
         {colorOpen && (
           <div className="absolute left-0 top-full z-50 mt-1.5 min-w-[280px] rounded-xl border border-zinc-600 bg-[#2c2c2c] p-4">
@@ -146,9 +153,7 @@ function StickyToolbar({
           aria-haspopup="true"
         >
           <span className="text-sm font-medium">Aa</span>
-          <svg className="h-3.5 w-3.5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <ChevronDownIcon className="h-3.5 w-3.5 text-white/70" />
         </button>
         {customSizeOpen && (
           <div className="absolute left-0 top-full z-50 mt-1.5 rounded-lg border border-zinc-600 bg-[#2c2c2c] p-3">
@@ -196,9 +201,7 @@ function StickyToolbar({
           aria-haspopup="true"
         >
           <span className="text-sm">{presetLabel}</span>
-          <svg className="h-3.5 w-3.5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+          <ChevronDownIcon className="h-3.5 w-3.5 text-white/70" />
         </button>
         {presetSizeOpen && (
           <div className="absolute left-0 top-full z-50 mt-1.5 rounded-lg border border-zinc-600 bg-[#2c2c2c] py-1">
@@ -251,10 +254,23 @@ function StickyToolbar({
         title="Bulleted list"
         aria-pressed={(note.listStyle ?? "none") === "bullet"}
       >
-        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-          <path d="M4 6h2v2H4V6zm0 5h2v2H4v-2zm0 5h2v2H4v-2zm3-10h11v1.5H7V6zm0 5h11v1.5H7V11zm0 5h11v1.5H7V16z" />
-        </svg>
+        <ListBulletIcon className="h-4 w-4" aria-hidden />
       </button>
+
+      {onDelete && (
+        <>
+          <div className="h-5 w-px bg-white/15" aria-hidden />
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-md px-4 py-2 text-white/90 hover:bg-red-600/80 hover:text-white"
+            title="Delete"
+            aria-label="Delete"
+          >
+            <TrashIcon className="h-4 w-4" aria-hidden />
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -274,6 +290,9 @@ export function Sticky({
   displayY,
   onSaveNote,
   onToolbarPatch,
+  onDelete,
+  dragPosition,
+  zoom,
   zIndex = 1,
 }: {
   note: StickyNote;
@@ -290,10 +309,17 @@ export function Sticky({
   displayY?: number;
   onSaveNote?: (note: StickyNote) => void;
   onToolbarPatch?: (patch: Partial<StickyNote>) => void;
+  onDelete?: () => void;
+  /** Content-space position for drag (use when parent positions the wrapper); required for correct drag when displayX/displayY are 0 */
+  dragPosition?: { x: number; y: number };
+  /** Board zoom (1 = 100%); needed to convert pointer delta to content space */
+  zoom?: number;
   zIndex?: number;
 }) {
   const x = displayX ?? note.x;
   const y = displayY ?? note.y;
+  const zoomLevel = zoom ?? 1;
+  const dragOrigin = dragPosition ?? { x: note.x, y: note.y };
   const [editing, setEditing] = useState(autoFocusEdit);
   const [localText, setLocalText] = useState(note.text);
   const hasAutoFocused = useRef(false);
@@ -360,6 +386,75 @@ export function Sticky({
     dragStarted?: boolean;
   } | null>(null);
 
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeScale, setResizeScale] = useState(1);
+  const resizeStartRef = useRef<{
+    centerX: number;
+    centerY: number;
+    startDistance: number;
+    startScale: number;
+  } | null>(null);
+  const resizeScaleRef = useRef(1);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  const getScaleFromPointer = useCallback(
+    (clientX: number, clientY: number): number => {
+      const start = resizeStartRef.current;
+      if (!start) return resizeScaleRef.current;
+      const { centerX, centerY, startDistance, startScale } = start;
+      const dx = clientX - centerX;
+      const dy = clientY - centerY;
+      const currentDistance = Math.hypot(dx, dy) || startDistance;
+      const ratio = currentDistance / startDistance;
+      const newScale = startScale * (1 + (ratio - 1) * RESIZE_SENSITIVITY);
+      return Math.max(IMAGE_SCALE_MIN, Math.min(IMAGE_SCALE_MAX, newScale));
+    },
+    []
+  );
+
+  const handleResizePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.stopPropagation();
+      const card = cardRef.current;
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const startScale = note.imageScale ?? 1;
+      const startDistance = Math.hypot(e.clientX - centerX, e.clientY - centerY) || 1;
+      resizeStartRef.current = { centerX, centerY, startDistance, startScale };
+      resizeScaleRef.current = startScale;
+      setResizeScale(startScale);
+      setIsResizing(true);
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [note.imageScale]
+  );
+
+  const handleResizePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const start = resizeStartRef.current;
+      if (!start) return;
+      const newScale = getScaleFromPointer(e.clientX, e.clientY);
+      resizeScaleRef.current = newScale;
+      setResizeScale(newScale);
+    },
+    [getScaleFromPointer]
+  );
+
+  const handleResizePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      const hadResize = resizeStartRef.current !== null;
+      resizeStartRef.current = null;
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      setIsResizing(false);
+      if (hadResize && onSaveNote) {
+        onSaveNote({ ...note, imageScale: resizeScaleRef.current });
+      }
+    },
+    [note, onSaveNote]
+  );
+
   const DRAG_THRESHOLD = 5;
 
   const handlePointerDown = useCallback(
@@ -368,11 +463,11 @@ export function Sticky({
       dragRef.current = {
         startX: e.clientX,
         startY: e.clientY,
-        noteX: x,
-        noteY: y,
+        noteX: dragOrigin.x,
+        noteY: dragOrigin.y,
       };
     },
-    [x, y]
+    [dragOrigin.x, dragOrigin.y]
   );
 
   const handlePointerMove = useCallback(
@@ -387,14 +482,16 @@ export function Sticky({
         e.currentTarget.setPointerCapture(e.pointerId);
         dragRef.current.dragStarted = true;
       }
+      const contentDx = dx / zoomLevel;
+      const contentDy = dy / zoomLevel;
       onUpdate({
         ...note,
-        x: noteX + dx,
-        y: noteY + dy,
-        });
+        x: noteX + contentDx,
+        y: noteY + contentDy,
+      });
       if (onDragMove) onDragMove(e.clientX, e.clientY);
     },
-    [note, onUpdate, onDragMove]
+    [note, zoomLevel, onUpdate, onDragMove]
   );
 
   const handlePointerUp = useCallback(
@@ -445,6 +542,9 @@ export function Sticky({
   const isBold = fontWeight === "bold";
   const isItalic = fontStyle === "italic";
   const isBullet = listStyle === "bullet";
+  const imageScale = note.imageUrl
+    ? (isResizing ? resizeScale : (note.imageScale ?? 1))
+    : 1;
 
   const handleTextareaKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -466,11 +566,12 @@ export function Sticky({
 
   return (
       <div
-        className={`absolute w-56 ${isDragging ? "transition-shadow duration-150" : "transition-all duration-150"}`}
+        className={`absolute ${note.imageUrl ? "" : "w-56"} ${isDragging ? "transition-shadow duration-150" : "transition-all duration-150"} relative`}
         style={{
         left: x,
         top: y,
         zIndex,
+        ...(note.imageUrl && { width: IMAGE_BASE_W * imageScale }),
       }}
       onPointerDown={handlePointerDown}
       onPointerMoveCapture={handlePointerMove}
@@ -483,20 +584,54 @@ export function Sticky({
           note={note}
           onUpdate={handleToolbarUpdate}
           onPointerDown={(e) => e.stopPropagation()}
+          onDelete={onDelete}
           visible={!isDragging}
         />
       )}
       <div
+        ref={cardRef}
         className={`flex min-h-[200px] flex-col rounded-lg border-2 transition-shadow ${
           isSelected ? "outline-2 outline-blue-500 outline-offset-0" : ""
         }`}
         style={{
           backgroundColor: note.color,
           borderColor,
+          ...(note.imageUrl && { minHeight: IMAGE_BASE_H * imageScale }),
         }}
       >
         <div className="flex min-h-0 flex-1 flex-col gap-1 p-3 select-none">
-          {editing ? (
+          {note.imageUrl ? (
+            <>
+              <div
+                className="relative flex-1 overflow-hidden rounded"
+                style={{
+                  minHeight: Math.max(128, IMAGE_BASE_H * imageScale - (note.text ? 48 : 24)),
+                  width: "100%",
+                }}
+              >
+                <img
+                  src={note.imageUrl}
+                  alt=""
+                  className="h-full w-full object-contain object-top"
+                  style={{
+                    imageRendering: "auto",
+                    minWidth: 0,
+                    minHeight: 0,
+                  }}
+                  draggable={false}
+                  onDragStart={(e) => e.preventDefault()}
+                />
+              </div>
+              {note.text ? (
+                <p
+                  className="mt-1 cursor-grab select-none rounded text-sm font-normal leading-normal text-zinc-800 whitespace-pre-wrap"
+                  onDragStart={(e) => e.preventDefault()}
+                >
+                  {note.text}
+                </p>
+              ) : null}
+            </>
+          ) : editing ? (
             <textarea
               ref={textareaRef}
               className="min-h-24 w-full resize-none wrap-break-word border-0 bg-transparent font-normal text-zinc-900 placeholder:text-zinc-600/70 outline-none select-text"
@@ -556,6 +691,34 @@ export function Sticky({
           )) || <div className="mt-auto" />}
         </div>
       </div>
+      {note.imageUrl && isSelected && (
+        <div
+          className="pointer-events-none absolute inset-0 rounded-lg"
+          aria-hidden
+        >
+          <div className="absolute inset-0 rounded-lg border-2 border-blue-500" />
+          {(["nw", "ne", "sw", "se"] as const).map((corner) => (
+            <div
+              key={corner}
+              data-resize-handle
+              role="slider"
+              aria-label={`Resize from ${corner}`}
+              aria-valuemin={IMAGE_SCALE_MIN}
+              aria-valuemax={IMAGE_SCALE_MAX}
+              aria-valuenow={imageScale}
+              className={`absolute z-10 h-5 w-5 cursor-se-resize rounded-full border-2 border-blue-500 bg-white shadow hover:bg-blue-50 hover:scale-110 pointer-events-auto ${
+                corner === "nw" ? "left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize" : ""
+              } ${corner === "ne" ? "right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-ne-resize" : ""} ${
+                corner === "sw" ? "bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-sw-resize" : ""
+              } ${corner === "se" ? "bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-se-resize" : ""}`}
+              onPointerDown={handleResizePointerDown}
+              onPointerMove={handleResizePointerMove}
+              onPointerUp={handleResizePointerUp}
+              onPointerCancel={handleResizePointerUp}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

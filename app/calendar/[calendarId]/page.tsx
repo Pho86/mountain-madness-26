@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useCalendarFirestore } from "@/lib/use-calendar-firestore";
+import { useCalendarFirestore } from "@/hooks/use-calendar-firestore";
 import { useAuth } from "@/lib/auth-context";
-import { useUserRooms } from "@/lib/use-user-rooms";
-import { useRoom } from "@/lib/use-room";
+import { useUserRooms } from "@/hooks/use-user-rooms";
+import { useRoom } from "@/hooks/use-room";
 import { BoardCalendar } from "@/components/BoardCalendar";
 import { CalendarPageSkeleton } from "@/components/CalendarPageSkeleton";
 import { RoomPageHeader } from "@/components/RoomPageHeader";

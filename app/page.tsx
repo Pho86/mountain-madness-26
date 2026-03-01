@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { JoinRoomForm } from "./JoinRoomForm";
 import { useAuth } from "@/lib/auth-context";
-import { useUserRooms } from "@/lib/use-user-rooms";
-import { useRoomNames } from "@/lib/use-room-names";
+import { useUserRooms } from "@/hooks/use-user-rooms";
+import { useRoomNames } from "@/hooks/use-room-names";
 
 export default function Home() {
   const { user } = useAuth();
