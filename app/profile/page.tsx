@@ -52,11 +52,13 @@ export default function ProfilePage() {
 
         {iconId && !needsAvatar && (
           <div className="mb-6 flex justify-center">
-            <img
-              src={getAvatarUrl(iconId)}
-              alt="Your avatar"
-              className="h-24 w-24 rounded-full border-2 border-zinc-200 object-cover"
-            />
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-[0_0_0_0.5px_rgb(228_228_231)]">
+              <img
+                src={getAvatarUrl(iconId)}
+                alt="Your avatar"
+                className={`h-16 w-16 rounded-full object-cover ${iconId === "Emily" || iconId === "Philip" ? "object-[50%_12%]" : "object-[50%_25%]"}`}
+              />
+            </div>
           </div>
         )}
 
@@ -66,17 +68,17 @@ export default function ProfilePage() {
               key={id}
               type="button"
               onClick={() => handleSelect(id)}
-              className={`relative h-24 w-24 overflow-hidden rounded-full border-2 transition hover:scale-105 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 ${
+              className={`relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-[0_0_0_0.5px_rgb(228_228_231)] transition hover:scale-105 focus:outline-none focus:ring-[0.5px] focus:ring-zinc-400 focus:ring-offset-2 ${
                 iconId === id
-                  ? "border-zinc-800 ring-2 ring-zinc-400 ring-offset-2"
-                  : "border-zinc-200 hover:border-zinc-300"
+                  ? "shadow-[0_0_0_0.5px_rgb(39_39_42)]"
+                  : "hover:shadow-[0_0_0_0.5px_rgb(212_212_216)]"
               }`}
               title={id}
             >
               <img
                 src={getAvatarUrl(id)}
                 alt=""
-                className="h-full w-full object-cover"
+                className={`h-20 w-20 rounded-full object-cover ${id === "Emily" || id === "Philip" ? "object-[50%_12%]" : "object-[50%_25%]"}`}
               />
             </button>
           ))}

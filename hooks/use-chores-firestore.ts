@@ -56,7 +56,7 @@ function fromDoc(data: {
     title: data.title ?? "",
     assignee: data.assignee ?? "",
     frequencyDays:
-      typeof data.frequencyDays === "number" && data.frequencyDays >= 1
+      typeof data.frequencyDays === "number" && data.frequencyDays >= 0
         ? data.frequencyDays
         : 7,
     lastDoneAt:

@@ -19,6 +19,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DUE_SOON_DAYS = 1;
 
 const FREQUENCY_OPTIONS: { label: string; days: number }[] = [
+  { label: "Once", days: 0 },
   { label: "Daily", days: 1 },
   { label: "Weekly", days: 7 },
   { label: "Biweekly", days: 14 },
@@ -26,6 +27,9 @@ const FREQUENCY_OPTIONS: { label: string; days: number }[] = [
 ];
 
 function getNextDueMs(chore: Chore): number {
+  if (chore.frequencyDays === 0) {
+    return chore.lastDoneAt != null ? Infinity : chore.createdAt;
+  }
   const base = chore.lastDoneAt ?? chore.createdAt;
   return base + chore.frequencyDays * MS_PER_DAY;
 }
@@ -33,6 +37,9 @@ function getNextDueMs(chore: Chore): number {
 function getStatus(
   chore: Chore,
 ): "overdue" | "due_soon" | "on_track" {
+  if (chore.frequencyDays === 0) {
+    return chore.lastDoneAt != null ? "on_track" : "overdue";
+  }
   const now = Date.now();
   const nextDue = getNextDueMs(chore);
   if (now >= nextDue) return "overdue";
@@ -41,7 +48,9 @@ function getStatus(
   return "on_track";
 }
 
-function formatDue(nextDueMs: number): string {
+function formatDue(nextDueMs: number, isOnce?: boolean): string {
+  if (isOnce && nextDueMs === Infinity) return "Done";
+  if (isOnce) return "Not done";
   const now = Date.now();
   const diff = nextDueMs - now;
   const days = Math.ceil(diff / MS_PER_DAY);
@@ -67,6 +76,7 @@ export default function ChoresPage() {
   const [title, setTitle] = useState("");
   const [assignee, setAssignee] = useState("");
   const [frequencyDays, setFrequencyDays] = useState(7);
+  const [justMarkedIds, setJustMarkedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user && choresId) ensureCurrentUser(user, currentUserIconId);
@@ -80,7 +90,7 @@ export default function ChoresPage() {
         id: crypto.randomUUID?.() ?? `chore-${Date.now()}`,
         title: title.trim(),
         assignee: assignee.trim() || "Unassigned",
-        frequencyDays: frequencyDays < 1 ? 1 : frequencyDays,
+        frequencyDays: frequencyDays < 0 ? 0 : frequencyDays,
         lastDoneAt: null,
         createdAt: Date.now(),
       };
@@ -220,8 +230,13 @@ export default function ChoresPage() {
                 </li>
               ) : (
                 chores.map((chore) => {
-                  const status = getStatus(chore);
-                  const nextDue = getNextDueMs(chore);
+                  // Optimistic: show reset due as soon as user clicks "Mark done"
+                  const choreForDisplay =
+                    justMarkedIds.has(chore.id)
+                      ? { ...chore, lastDoneAt: Date.now() }
+                      : chore;
+                  const status = getStatus(choreForDisplay);
+                  const nextDue = getNextDueMs(choreForDisplay);
                   return (
                     <li
                       key={chore.id}
@@ -243,15 +258,19 @@ export default function ChoresPage() {
                                   alt=""
                                   className="h-6 w-6 shrink-0 rounded-full object-cover"
                                 />
-                                <span>
-                                  {chore.assignee} · every {chore.frequencyDays}{" "}
-                                  {chore.frequencyDays === 1 ? "day" : "days"}
-                                </span>
+<span>
+                                {chore.assignee}
+                                {chore.frequencyDays === 0
+                                  ? " · once"
+                                  : ` · every ${chore.frequencyDays} ${chore.frequencyDays === 1 ? "day" : "days"}`}
+                              </span>
                               </>
                             ) : (
                               <span>
-                                {chore.assignee} · every {chore.frequencyDays}{" "}
-                                {chore.frequencyDays === 1 ? "day" : "days"}
+                                {chore.assignee}
+                                {chore.frequencyDays === 0
+                                  ? " · once"
+                                  : ` · every ${chore.frequencyDays} ${chore.frequencyDays === 1 ? "day" : "days"}`}
                               </span>
                             );
                           })()}
@@ -264,20 +283,58 @@ export default function ChoresPage() {
                                 ? "bg-amber-100 text-amber-800"
                                 : "bg-zinc-100 text-zinc-600"
                           }`}
-                          title={formatDue(nextDue)}
+                          title={formatDue(nextDue, choreForDisplay.frequencyDays === 0)}
                         >
-                          {status === "overdue"
-                            ? "Overdue"
-                            : status === "due_soon"
-                              ? "Due soon"
-                              : formatDue(nextDue)}
+                          {choreForDisplay.frequencyDays === 0
+                            ? status === "on_track"
+                              ? "Done"
+                              : "Not done"
+                            : status === "overdue"
+                              ? "Overdue"
+                              : status === "due_soon"
+                                ? "Due soon"
+                                : formatDue(nextDue)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => markDone(chore.id)}
-                          className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700"
+                          onClick={() => {
+                            if (chore.frequencyDays === 0) {
+                              setJustMarkedIds((prev) => {
+                                const next = new Set(prev);
+                                next.add(chore.id);
+                                return next;
+                              });
+                              setTimeout(() => {
+                                deleteChore(chore.id);
+                                setJustMarkedIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(chore.id);
+                                  return next;
+                                });
+                              }, 400);
+                            } else {
+                              markDone(chore.id);
+                              setJustMarkedIds((prev) => {
+                                const next = new Set(prev);
+                                next.add(chore.id);
+                                return next;
+                              });
+                              setTimeout(() => {
+                                setJustMarkedIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(chore.id);
+                                  return next;
+                                });
+                              }, 600);
+                            }
+                          }}
+                          className={`rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-colors ${
+                            justMarkedIds.has(chore.id)
+                              ? "bg-green-600 hover:bg-green-600"
+                              : "bg-zinc-800 hover:bg-zinc-700"
+                          }`}
                         >
                           Mark done
                         </button>
