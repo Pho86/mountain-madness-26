@@ -491,7 +491,7 @@ export function Sticky({
             />
           ) : (
             <p
-              className="min-h-20 flex-1 cursor-grab wrap-break-word rounded p-2 font-normal leading-normal text-zinc-800 whitespace-pre-wrap"
+              className="min-h-20 flex-1 cursor-grab select-none wrap-break-word rounded p-2 font-normal leading-normal text-zinc-800 whitespace-pre-wrap"
               style={{
                 fontSize: fontSizePx,
                 fontWeight: isBold ? "bold" : "normal",
@@ -507,6 +507,7 @@ export function Sticky({
                 );
                 setEditing(true);
               }}
+              onDragStart={(e) => e.preventDefault()}
             >
               {isBullet && note.text
                 ? note.text.split("\n").map((line, i) => (

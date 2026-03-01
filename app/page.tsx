@@ -16,18 +16,19 @@ export default function Home() {
       : "ABCD1234";
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-10 bg-zinc-100 px-4 py-10">
-      <div className="max-w-md text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
-          Waifu Fridge
-        </h1>
-        <p className="mt-2 text-zinc-600">
-          Share one room for sticky notes and budget tracker. Enter a room code
-          to join, or create a new room and share the code.
-        </p>
-      </div>
+    <div className="flex h-screen flex-col items-center justify-center overflow-hidden bg-zinc-100 px-4">
+      <div className="flex w-full max-w-md max-h-full flex-col items-center gap-6 overflow-auto py-6">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+            Waifu Fridge
+          </h1>
+          <p className="mt-2 text-zinc-600">
+            Share one room for sticky notes and budget tracker. Enter a room code
+            to join, or create a new room and share the code.
+          </p>
+        </div>
 
-      <div className="flex w-full max-w-md flex-col gap-8">
+        <div className="flex w-full flex-col gap-6">
         {user && (
           <section className="rounded-xl border border-zinc-200 bg-white p-4">
             <h2 className="mb-3 text-sm font-medium text-zinc-500">
@@ -65,7 +66,7 @@ export default function Home() {
           </section>
         )}
 
-        <section className="flex flex-col gap-6">
+        <section className="flex flex-col gap-4">
           <JoinRoomForm />
           <div className="relative flex items-center gap-3">
             <div className="flex-1 border-t border-zinc-300" />
@@ -79,11 +80,12 @@ export default function Home() {
             Create new room
           </Link>
         </section>
-      </div>
+        </div>
 
-      <p className="text-center text-sm text-zinc-500">
-        Same room code opens stickies and budget · Real-time with Firebase
-      </p>
+        <p className="text-center text-sm text-zinc-500">
+          Same room code opens stickies and budget · Real-time with Firebase
+        </p>
+      </div>
     </div>
   );
 }

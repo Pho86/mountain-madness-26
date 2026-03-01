@@ -103,7 +103,7 @@ export function AuthHeader() {
                 type="button"
                 onClick={handleSignOut}
                 disabled={signingOut}
-                className="rounded-lg bg-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-300 disabled:opacity-50"
+                className="rounded-lg bg-zinc-200 px-3 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-300 disabled:opacity-50"
               >
                 {signingOut ? "Signing out…" : "Sign out"}
               </button>
@@ -111,7 +111,7 @@ export function AuthHeader() {
           ) : (
             <Link
               href="/login"
-              className="rounded-lg bg-zinc-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-700"
+              className="rounded-lg bg-zinc-800 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700"
             >
               Sign in
             </Link>

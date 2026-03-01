@@ -330,10 +330,11 @@ export default function BoardPage() {
         setZoom(newZoom);
         setPan({ x: newPanX, y: newPanY });
       } else {
-        // Two-finger scroll: pan
+        // Two-finger scroll: pan (sensitivity < 1 to slow trackpad)
         const scale = e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? 800 : 1;
-        const dx = e.deltaX * scale;
-        const dy = e.deltaY * scale;
+        const sensitivity = 0.65;
+        const dx = e.deltaX * scale * sensitivity;
+        const dy = e.deltaY * scale * sensitivity;
         setPan((prev) => ({
           x: prev.x - dx,
           y: prev.y - dy,
