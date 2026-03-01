@@ -54,6 +54,8 @@ export type CalendarEvent = {
   date: string;
   time: string | null;
   recurring: "none" | "daily" | "weekly" | "monthly";
+  /** Last date (YYYY-MM-DD) this event should occur; only used for recurring events */
+  endDate?: string | null;
   /** For recurring: skip these dates (YYYY-MM-DD) when expanding occurrences */
   exceptionDates?: string[];
   createdAt: number;

@@ -53,6 +53,10 @@ body {
   font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 }
 
+button {
+  min-height: 36px;
+}
+
 /* Board canvas: cream frame with fridge image centered */
 .bg-fridge-canvas {
   background-color: var(--fridge-cream);
@@ -106,32 +110,38 @@ textarea::placeholder {
   opacity: 0.9;
 }
 
-/* Softer skeleton pulse for loading states */
-@keyframes skeleton-pulse {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.animate-skeleton-pulse {
-  animation: skeleton-pulse 2s ease-in-out infinite;
-}
-
 @keyframes fade-in {
   from {
-    opacity: 0.85;
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .animate-fade-in {
-  animation: fade-in 0.35s ease-out;
+  animation: fade-in 0.9s ease-out;
 }
+
+/* Homepage (logged-in) sections: fade/slide in individually */
+@keyframes home-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-item {
+  opacity: 0;
+  animation: home-item-in 0.8s ease-out forwards;
+}
+
 
 /* Avatar hover bounce on profile page */
 @keyframes avatar-bounce {

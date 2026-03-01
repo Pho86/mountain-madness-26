@@ -30,6 +30,7 @@ function toDoc(event: CalendarEvent) {
     date: event.date,
     time: event.time,
     recurring: event.recurring,
+    ...(event.endDate && { endDate: event.endDate }),
     ...(event.exceptionDates?.length && { exceptionDates: event.exceptionDates }),
     createdAt: event.createdAt,
   };
@@ -41,6 +42,7 @@ function fromDoc(data: {
   date: string;
   time: string | null;
   recurring: CalendarEvent["recurring"];
+  endDate?: string | null;
   exceptionDates?: string[];
   createdAt: unknown;
 }): CalendarEvent {
@@ -55,6 +57,7 @@ function fromDoc(data: {
     date: data.date ?? "",
     time: data.time ?? null,
     recurring: data.recurring ?? "none",
+    endDate: data.endDate ?? null,
     exceptionDates: data.exceptionDates ?? [],
     createdAt,
   };

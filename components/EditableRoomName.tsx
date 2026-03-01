@@ -70,7 +70,7 @@ export function EditableRoomName({
   if (loading) {
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="h-7 w-48 min-w-48 animate-skeleton-pulse rounded bg-zinc-200" />
+        <span className="text-zinc-500">Loading…</span>
         {!hideCode && (
           <span className="shrink-0 font-mono text-sm text-zinc-500">Code: {roomCode}</span>
         )}

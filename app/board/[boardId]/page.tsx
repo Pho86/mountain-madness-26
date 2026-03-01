@@ -3,17 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
-import { useBoardFirestore } from "@/hooks/use-board-firestore";
+import { UserGroupIcon } from "@heroicons/react/24/outline";
 import { upload } from "@vercel/blob/client";
+import { useBoardFirestore } from "@/hooks/use-board-firestore";
 import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/hooks/use-user-rooms";
 import { useUserProfile } from "@/lib/use-user-profile";
+import { useRoomMembers } from "@/hooks/use-room-members";
 import { Sticky, useAddSticky } from "@/components/Sticky";
 import { BoardToolbar } from "@/components/BoardToolbar";
 import { DeleteZone } from "@/components/DeleteZone";
 import { EditableRoomName } from "@/components/EditableRoomName";
 import { FridgeLayout } from "@/components/FridgeLayout";
-import { BoardPageSkeleton } from "@/components/BoardPageSkeleton";
+import { Modal } from "@/components/Modal";
+import { getAvatarUrl } from "@/lib/avatars";
 import { useRoom } from "@/hooks/use-room";
 import type { StickyNote } from "@/lib/types";
 
@@ -43,6 +46,7 @@ export default function BoardPage() {
     useBoardFirestore(boardId);
   const authorName = user?.displayName || user?.email?.split("@")[0] || undefined;
   const { iconId: authorIconId } = useUserProfile(user?.uid ?? null);
+  const { members, ensureCurrentUser } = useRoomMembers(boardId);
   const createSticky = useAddSticky(authorName, authorIconId ?? undefined);
   const [tool, setTool] = useState<Tool>("cursor");
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -82,6 +86,7 @@ export default function BoardPage() {
   const selectionBoxRef = useRef<SelectionBox | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [showMembersModal, setShowMembersModal] = useState(false);
 
   const noteIds = new Set(notes.map((n) => n.id));
   const displayNotes = [...notes, ...pendingNotes.filter((p) => !noteIds.has(p.id))];
@@ -631,6 +636,11 @@ export default function BoardPage() {
   }, [user, boardId, addRoom]);
 
   useEffect(() => {
+    if (!boardId || !user) return;
+    ensureCurrentUser(user, authorIconId ?? null);
+  }, [boardId, user, authorIconId, ensureCurrentUser]);
+
+  useEffect(() => {
     if (boardId) ensureRoomExists();
   }, [boardId, ensureRoomExists]);
 
@@ -745,7 +755,7 @@ export default function BoardPage() {
             onPointerMove={(e) => e.stopPropagation()}
           >
             <div
-              className="rounded border-2 px-3 py-2 font-serif text-zinc-900"
+              className="flex items-center gap-2 rounded border-2 px-3 py-2 font-serif text-zinc-900"
               style={{
                 backgroundColor: "var(--fridge-cream)",
                 borderColor: "#5c4033",
@@ -762,30 +772,20 @@ export default function BoardPage() {
                 inputClassName="w-full min-w-0 border-0 border-b-2 border-zinc-600 bg-transparent py-0.5 text-right text-lg font-medium text-zinc-900 outline-none focus:ring-0 [background:transparent]"
                 compact
               />
+              <button
+                type="button"
+                onClick={() => setShowMembersModal(true)}
+                className="inline-flex h-8 w-8 aspect-square items-center justify-center rounded-full border border-zinc-500/60 bg-white/30 text-zinc-700 hover:bg-neutral-200"
+                title="View people in this room"
+                aria-label="View people in this room"
+              >
+                <UserGroupIcon className="h-4 w-4 aspect-square" />
+              </button>
             </div>
           </div>
         )}
         {roomLoading ? (
-          <div className="absolute inset-0 min-h-full min-w-full">
-            <div className="absolute left-[8%] top-[12%] -rotate-2">
-              <div className="h-28 w-44 rounded-lg bg-zinc-200/90 animate-skeleton-pulse" />
-            </div>
-            <div className="absolute left-[42%] top-[8%] rotate-1">
-              <div className="h-32 w-40 rounded-lg bg-zinc-200/80 animate-skeleton-pulse" style={{ animationDelay: "0.15s" }} />
-            </div>
-            <div className="absolute right-[15%] top-[22%] -rotate-1">
-              <div className="h-24 w-36 rounded-lg bg-zinc-200/85 animate-skeleton-pulse" style={{ animationDelay: "0.3s" }} />
-            </div>
-            <div className="absolute left-[15%] top-[45%] rotate-2">
-              <div className="h-28 w-40 rounded-lg bg-zinc-200/75 animate-skeleton-pulse" style={{ animationDelay: "0.1s" }} />
-            </div>
-            <div className="absolute left-[55%] top-[38%] -rotate-1">
-              <div className="h-28 w-40 rounded-lg bg-zinc-200/80 animate-skeleton-pulse" style={{ animationDelay: "0.25s" }} />
-            </div>
-            <div className="absolute right-[25%] top-[55%] rotate-1">
-              <div className="h-24 w-32 rounded-lg bg-zinc-200/70 animate-skeleton-pulse" style={{ animationDelay: "0.35s" }} />
-            </div>
-          </div>
+          <div className="absolute inset-0 min-h-full min-w-full" />
         ) : (
         <div
           className="absolute inset-0 min-h-full min-w-full origin-top-left"
@@ -891,6 +891,40 @@ export default function BoardPage() {
         )}
       </div>
     </div>
+      <Modal
+        open={showMembersModal}
+        onClose={() => setShowMembersModal(false)}
+      >
+        <h2 className="mb-2 text-sm font-semibold text-zinc-900">
+          People in this room
+        </h2>
+        {members.length === 0 ? (
+          <p className="text-sm text-zinc-600">
+            Only you are here so far.
+          </p>
+        ) : (
+          <ul className="mt-2 space-y-1">
+            {members.map((m) => (
+              <li
+                key={m.id}
+                className="flex items-center gap-2 rounded px-2 py-1 text-sm text-zinc-800"
+              >
+                {m.iconId && (
+                  <img
+                    src={getAvatarUrl(m.iconId)}
+                    alt=""
+                    className="h-6 w-6 shrink-0 rounded-full"
+                  />
+                )}
+                <span className="truncate">
+                  {m.displayName}
+                  {user?.uid === m.id ? " (you)" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
     </FridgeLayout>
   );
 }
