@@ -68,15 +68,16 @@ export function FridgeLayout({
 }) {
   const pathname = usePathname();
   const { section, roomId } = getSectionAndRoomFromPathname(pathname ?? "");
+  const { user, signOut } = useAuth();
+  /** On landing (/) only; when logged in jars are still not clickable on /, when logged out other tabs (jars) not accessible */
   const jarsClickable = pathname !== "/";
   const showJarLabels = pathname !== "/";
-  const { signOut } = useAuth();
 
   return (
     <div className="flex min-h-screen flex-col bg-fridge-outer animate-fade-in">
       {showJars && (
         <div
-          className="flex shrink-0 flex-wrap items-end gap-4 bg-fridge-cream mx-12"
+          className="flex shrink-0 flex-wrap items-end gap-4 bg-fridge-cream ml-40 mr-12"
           style={{ minHeight: "72px" }}
           aria-label="Top of fridge"
         >
@@ -126,23 +127,41 @@ export function FridgeLayout({
               </span>
             );
           })}
-          <div className="ml-auto flex items-end gap-2">
-            <button
-              type="button"
-              onClick={() => signOut?.()}
-              className="relative flex h-14 min-w-40 items-center justify-center overflow-hidden bg-transparent transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-700 focus:ring-offset-2 focus:ring-offset-fridge-cream"
-              style={{
-                backgroundImage: "url(/jars/signout-pot.svg)",
-                backgroundSize: "100% 100%",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center",
-              }}
-              aria-label="Sign out"
-            >
-              <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white drop-shadow-md">
-                Sign out
-              </span>
-            </button>
+          <div className="ml-auto mr-20 flex items-end gap-2">
+            {user ? (
+              <button
+                type="button"
+                onClick={() => signOut?.()}
+                className="relative flex h-14 min-w-40 items-center justify-center overflow-hidden bg-transparent transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-700 focus:ring-offset-2 focus:ring-offset-fridge-cream"
+                style={{
+                  backgroundImage: "url(/jars/signout-pot.svg)",
+                  backgroundSize: "100% 100%",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                }}
+                aria-label="Sign out"
+              >
+                <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white drop-shadow-md">
+                  Sign out
+                </span>
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="relative flex h-14 min-w-40 items-center justify-center overflow-hidden bg-transparent transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-700 focus:ring-offset-2 focus:ring-offset-fridge-cream"
+                style={{
+                  backgroundImage: "url(/jars/signout-pot.svg)",
+                  backgroundSize: "100% 100%",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                }}
+                aria-label="Sign in"
+              >
+                <span className="relative z-10 text-sm font-semibold uppercase tracking-wide text-white drop-shadow-md">
+                  Sign in
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       )}
