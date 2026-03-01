@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import {
   GoogleAuthProvider,
@@ -26,6 +27,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
-  }, []);
+    router.push("/");
+  }, [router]);
 
   const value: AuthContextValue = {
     user,

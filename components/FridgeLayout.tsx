@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -9,6 +10,8 @@ import {
   getJarHref,
   type JarSlug,
 } from "@/lib/fridge-jars";
+
+const LAST_ROOM_STORAGE_KEY = "waifu-fridge-last-room-id";
 
 function JarContent({
   label,
@@ -73,6 +76,20 @@ export function FridgeLayout({
   const jarsClickable = pathname !== "/";
   const showJarLabels = pathname !== "/";
 
+  const [storedRoomId, setStoredRoomId] = useState<string | null>(null);
+
+  // Persist room id when we have one; use as fallback when pathname has no id so Notes jar links back to board
+  useEffect(() => {
+    if (roomId) {
+      if (typeof window !== "undefined") window.sessionStorage.setItem(LAST_ROOM_STORAGE_KEY, roomId);
+      setStoredRoomId(roomId);
+    } else if (typeof window !== "undefined") {
+      setStoredRoomId(window.sessionStorage.getItem(LAST_ROOM_STORAGE_KEY));
+    }
+  }, [roomId]);
+
+  const effectiveRoomId = roomId ?? storedRoomId;
+
   return (
     <div className="flex min-h-screen flex-col bg-fridge-outer animate-fade-in">
       {showJars && (
@@ -89,7 +106,7 @@ export function FridgeLayout({
           />
           {JAR_CONFIG.map(({ slug, label, bodyColor, labelBg, labelBorder, labelText }) => {
             const isActive = section === slug;
-            const href = getJarHref(slug, roomId);
+            const href = getJarHref(slug, effectiveRoomId);
             const baseClassName =
               "relative flex w-20 shrink-0 flex-col items-center transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-fridge-cream focus:ring-offset-fridge-outer";
             const activeClassName = isActive ? " ring-2 ring-amber-600 ring-offset-2 ring-offset-fridge-cream scale-105" : "";

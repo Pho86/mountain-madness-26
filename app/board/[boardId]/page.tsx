@@ -663,7 +663,7 @@ export default function BoardPage() {
         {/* Fridge name + room code plaque (on the fridge, top right) */}
         {!roomLoading && boardId && (
           <div
-            className="absolute right-6 top-6 z-10"
+            className="absolute right-28 top-6 z-10"
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}
             onPointerMove={(e) => e.stopPropagation()}
