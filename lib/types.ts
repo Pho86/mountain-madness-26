@@ -25,3 +25,15 @@ export type Expense = {
   splitCount: number;
   createdAt: number;
 };
+
+/** Recurrence: number of days between due dates (e.g. 1 = daily, 7 = weekly) */
+export type Chore = {
+  id: string;
+  title: string;
+  assignee: string;
+  /** Days between due dates (e.g. 1 = daily, 7 = weekly, 30 = monthly) */
+  frequencyDays: number;
+  /** Timestamp when the chore was last marked done; next due = lastDoneAt + frequencyDays */
+  lastDoneAt: number | null;
+  createdAt: number;
+};
