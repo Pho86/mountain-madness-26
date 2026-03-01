@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
 import { useBoardFirestore } from "@/hooks/use-board-firestore";
-import { useBoardCursors } from "@/hooks/use-board-cursors";
 import { upload } from "@vercel/blob/client";
 import { useAuth } from "@/lib/auth-context";
 import { useUserRooms } from "@/hooks/use-user-rooms";
@@ -45,11 +44,6 @@ export default function BoardPage() {
   const authorName = user?.displayName || user?.email?.split("@")[0] || undefined;
   const { iconId: authorIconId } = useUserProfile(user?.uid ?? null);
   const createSticky = useAddSticky(authorName, authorIconId ?? undefined);
-  const { otherCursors, setMyCursor } = useBoardCursors(
-    boardId,
-    user?.uid ?? null,
-    authorName
-  );
   const [tool, setTool] = useState<Tool>("cursor");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
@@ -223,12 +217,6 @@ export default function BoardPage() {
     (e: React.PointerEvent<HTMLDivElement>) => {
       const main = mainRef.current;
       const { pan: currentPan, zoom: currentZoom } = panZoomRef.current;
-      if (main) {
-        const rect = main.getBoundingClientRect();
-        const contentX = (e.clientX - rect.left - currentPan.x) / currentZoom;
-        const contentY = (e.clientY - rect.top - currentPan.y) / currentZoom;
-        setMyCursor(contentX, contentY);
-      }
       if (selectionBox !== null) {
         setSelectionBox((prev) => {
           const next = prev ? { ...prev, endX: e.clientX, endY: e.clientY } : null;
@@ -258,7 +246,7 @@ export default function BoardPage() {
         y: start.panY + (e.clientY - start.clientY),
       });
     },
-    [pendingNewNoteDrag, selectionBox, setMyCursor]
+    [pendingNewNoteDrag, selectionBox]
   );
 
   const handlePointerUp = useCallback(
@@ -846,27 +834,6 @@ export default function BoardPage() {
               </div>
             );
           })}
-          {otherCursors.map((c) => (
-            <div
-              key={c.userId}
-              className="pointer-events-none absolute z-20 flex items-center gap-1"
-              style={{ left: c.x, top: c.y, transform: "translate(0, -4px)" }}
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-6 w-6 text-blue-600"
-                aria-hidden
-              >
-                <path d="M4 4l7.5 15 2.5-5.5L22 10 4 4zm2.5 3.8l9.2 3.8-5.9 5.9L6.5 7.8z" />
-              </svg>
-              <span className="rounded bg-blue-600 px-2 py-0.5 text-xs font-medium text-white whitespace-nowrap">
-                {c.displayName}
-              </span>
-            </div>
-          ))}
         </div>
         )}
       </div>

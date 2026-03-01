@@ -15,7 +15,7 @@ service cloud.firestore {
       }
     }
 
-    // Boards (notes, cursors): read/write for authenticated users
+    // Boards (notes): read/write for authenticated users
     match /boards/{boardId} {
       allow read, write: if request.auth != null;
       match /{subcollection=**} {
